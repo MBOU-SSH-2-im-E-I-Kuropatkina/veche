@@ -1,0 +1,38 @@
+{
+  "name": "veche-lang",
+  "displayName": "Вече Language",
+  "description": "Подсветка, автодополнение и сниппеты для языка «Вече»",
+  "version": "1.1.0",
+  "publisher": "veche",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": ["Programming Languages"],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:veche"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "veche",
+        "aliases": ["Вече", "veche"],
+        "extensions": [".veche", ".vech"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "veche",
+        "scopeName": "source.veche",
+        "path": "./syntaxes/veche.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "veche",
+        "path": "./snippets/veche.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Вече",
+  "scopeName": "source.veche",
+  "fileTypes": [".veche", ".vech"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#interpolation" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#builtins" },
+    { "include": "#errors" },
+    { "include": "#operators" },
+    { "include": "#punctuation" },
+    { "include": "#functions" },
+    { "include": "#classes" },
+    { "include": "#variables" }
+  ],
+  "repository": {
+
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.veche",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.veche",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.veche",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "include": "#interpolation" },
+            {
+              "name": "constant.character.escape.veche",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+
+    "interpolation": {
+      "patterns": [
+        {
+          "name": "meta.embedded.expression.veche",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            { "include": "#numbers" },
+            { "include": "#keywords" },
+            { "include": "#constants" },
+            { "include": "#variables" },
+            { "include": "#operators" }
+          ]
+        }
+      ]
+    },
+
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.veche",
+          "match": "\\b\\d+\\.\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.veche",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.veche",
+          "match": "\\b(если|иначе|пока|для|в|прервать|продолжить|возврат|попытка|перехват|наконец|поднять)\\b"
+        },
+        {
+          "name": "keyword.declaration.veche",
+          "match": "\\b(константа|строгое|функция|класс|наследует|переопределить)\\b"
+        },
+        {
+          "name": "keyword.other.veche",
+          "match": "\\b(новый|себя|базовый)\\b"
+        },
+        {
+          "name": "keyword.operator.word.veche",
+          "match": "\\b(и|или|не)\\b"
+        }
+      ]
+    },
+
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.veche",
+          "match": "\\b(целое|дробное|слово|строка|булево|список|словарь|кортеж|ничто)\\b"
+        }
+      ]
+    },
+
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.veche",
+          "match": "\\b(истина|ложь)\\b"
+        },
+        {
+          "name": "constant.language.null.veche",
+          "match": "\\bничто\\b"
+        }
+      ]
+    },
+
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.veche",
+          "match": "\\b(печать|ввод)\\b"
+        }
+      ]
+    },
+
+    "errors": {
+      "patterns": [
+        {
+          "name": "support.class.error.veche",
+          "match": "\\b(ОшибкаСинтаксиса|ОшибкаТипа|ОшибкаИмени|ОшибкаДеленияНаНоль|ОшибкаИндекса|ОшибкаВвода|Ошибка)\\b"
+        }
+      ]
+    },
+
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.veche",
+          "match": "==|!=|<=|>=|->|[+\\-*/%<>=!]"
+        }
+      ]
+    },
+
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.veche",
+          "match": "[,;:]"
+        },
+        {
+          "name": "punctuation.definition.block.veche",
+          "match": "[{}\\[\\]()]"
+        },
+        {
+          "name": "punctuation.accessor.veche",
+          "match": "\\."
+        }
+      ]
+    },
+
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.veche",
+          "match": "(?<=\\bфункция\\s+)[\\p{L}_][\\p{L}\\p{N}_]*"
+        },
+        {
+          "name": "entity.name.function.call.veche",
+          "match": "\\b[\\p{L}_][\\p{L}\\p{N}_]*(?=\\s*\\()"
+        }
+      ]
+    },
+
+    "classes": {
+      "patterns": [
+        {
+          "name": "entity.name.type.class.veche",
+          "match": "(?<=\\bкласс\\s+)[\\p{L}_][\\p{L}\\p{N}_]*"
+        },
+        {
+          "name": "entity.other.inherited-class.veche",
+          "match": "(?<=\\bнаследует\\s+)[\\p{L}_][\\p{L}\\p{N}_]*"
+        }
+      ]
+    },
+
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.veche",
+          "match": "\\b[\\p{L}_][\\p{L}\\p{N}_]*\\b"
+        }
+      ]
+    }
+
+  }
+}
