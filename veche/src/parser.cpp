@@ -8,28 +8,39 @@ Parser::Parser(std::vector<Token> toks, std::string file,
     : toks_(std::move(toks)), file_(std::move(file)), lines_(lines) {}
 
 const Token& Parser::cur() { return toks_[pos_]; }
+
 const Token& Parser::peek(int n) {
     size_t p = pos_ + n;
     if (p >= toks_.size()) p = toks_.size() - 1;
     return toks_[p];
 }
+
 bool Parser::check(TokKind k) { return cur().kind == k; }
-bool Parser::match(TokKind k) { if (check(k)) { ++pos_; return true; } return false; }
+
+bool Parser::match(TokKind k) {
+    if (check(k)) { ++pos_; return true; }
+    return false;
+}
 
 std::string Parser::srcLine(int ln) const {
     if (!lines_ || ln <= 0 || (size_t)ln > lines_->size()) return "";
     return (*lines_)[ln - 1];
 }
-void Parser::errorAt(const Token& t, const std::string& kind, const std::string& msg) {
+
+void Parser::errorAt(const Token& t, const std::string& kind,
+                     const std::string& msg) {
     throw VecheError(kind, msg, file_, t.line, t.col, srcLine(t.line));
 }
+
 void Parser::error(const std::string& kind, const std::string& msg) {
     errorAt(cur(), kind, msg);
 }
+
 const Token& Parser::expect(TokKind k, const std::string& what) {
     if (!check(k)) error("ОшибкаСинтаксиса", "Ожидалось " + what);
     return toks_[pos_++];
 }
+
 std::string Parser::typeFromToken(const Token& t) {
     switch (t.kind) {
         case TokKind::KwTypeInt:    return "целое";
@@ -42,17 +53,33 @@ std::string Parser::typeFromToken(const Token& t) {
         case TokKind::KwTypeDict:   return "словарь";
         case TokKind::KwTypeTuple:  return "кортеж";
         case TokKind::KwTypeNull:   return "ничто";
+        case TokKind::Ident:        return t.text;   // имя класса — тоже тип
         default: return "";
     }
 }
+
 bool Parser::isTypeToken(const Token& t) {
     return !typeFromToken(t).empty();
+}
+
+// ============================================================
+//                          ПРОГРАММА
+// ============================================================
+std::vector<StmtPtr> Parser::parseProgram() {
+    std::vector<StmtPtr> prog;
+    while (!check(TokKind::End)) {
+        skipSeparators();
+        if (check(TokKind::End)) break;
+        prog.push_back(parseStatement());
+    }
+    return prog;
 }
 
 void Parser::skipSeparators() {
     while (check(TokKind::Newline) || check(TokKind::Semicolon)) ++pos_;
 }
 
+// Тело блока: Indent ... Dedent
 StmtPtr Parser::parseBlockIndent() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::Block;
@@ -67,16 +94,9 @@ StmtPtr Parser::parseBlockIndent() {
     return s;
 }
 
-std::vector<StmtPtr> Parser::parseProgram() {
-    std::vector<StmtPtr> prog;
-    while (!check(TokKind::End)) {
-        skipSeparators();
-        if (check(TokKind::End)) break;
-        prog.push_back(parseStatement());
-    }
-    return prog;
-}
-
+// ============================================================
+//                          ОПЕРАТОРЫ
+// ============================================================
 StmtPtr Parser::parseStatement() {
     const Token& t = cur();
     switch (t.kind) {
@@ -93,36 +113,32 @@ StmtPtr Parser::parseStatement() {
         case TokKind::KwRaise:    return parseRaise();
         case TokKind::KwBreak:    return parseBreakContinue(TokKind::KwBreak);
         case TokKind::KwContinue: return parseBreakContinue(TokKind::KwContinue);
-        case TokKind::KwPrint:    // вывод как оператор
-        case TokKind::KwInput:
-        case TokKind::KwWindow:
-        case TokKind::KwDrawPoint:
-        case TokKind::KwDrawLine:
-        case TokKind::KwDrawRect:
-        case TokKind::KwColor:
-        case TokKind::KwClear:
-        case TokKind::KwSleep:
-        case TokKind::KwClose:
         default:                  return parseSimpleOrAssign();
     }
 }
 
+// пусть [постоянное] [строгое] <тип> <имя> будет <expr>
+// пусть <target> станет <expr>
+// пусть <target> будет <expr>
 StmtPtr Parser::parseLetStmt() {
-    // пусть [постоянное] [строгое] <тип> <имя> будет <expr>
-    //   | пусть <target> станет <expr>
-    //   | пусть <target> будет <expr>    (для сам.поле)
     auto s = std::make_shared<Stmt>();
     s->line = cur().line; s->col = cur().col;
     expect(TokKind::KwLet, "'пусть'");
 
-    // модификаторы и тип (для объявления)
-    bool haveConst = match(TokKind::KwConst);
+    bool haveConst  = match(TokKind::KwConst);
     bool haveStrict = match(TokKind::KwStrict);
 
-    // <тип>
-    if (isTypeToken(cur())) {
+    // Признак объявления: <тип/класс> <Ident> будет
+    bool looksLikeDecl =
+        isTypeToken(cur())
+        && peek(1).kind == TokKind::Ident
+        && peek(2).kind == TokKind::KwBe;
+
+    if (haveConst || haveStrict) looksLikeDecl = true;
+
+    if (looksLikeDecl) {
         s->kind = StmtKind::VarDecl;
-        s->isConst = haveConst;
+        s->isConst  = haveConst;
         s->isStrict = haveStrict;
         s->typeName = typeFromToken(cur());
         ++pos_;
@@ -139,16 +155,16 @@ StmtPtr Parser::parseLetStmt() {
 
     if (haveConst || haveStrict) {
         error("ОшибкаСинтаксиса",
-            "'постоянное'/'строгое' допустимы только при объявлении с типом");
+            "'постоянное'/'строгое' допустимы только при объявлении");
     }
 
-    // присваивание: пусть <target> (станет|будет) <expr>
+    // Присваивание
     s->kind = StmtKind::Assign;
     s->assignTarget = parsePostfix();
     if (match(TokKind::KwBecome)) {
-        // станет — присваивание существующей
+        // станет
     } else if (match(TokKind::KwBe)) {
-        // будет — присваивание/создание поля (в т.ч. сам.х)
+        // будет
     } else {
         error("ОшибкаСинтаксиса", "Ожидалось 'станет' или 'будет'");
     }
@@ -170,7 +186,7 @@ StmtPtr Parser::parseIf() {
     skipSeparators();
     if (match(TokKind::KwElse)) {
         if (match(TokKind::KwIf)) {
-            // иначе если (<усл>) то блок
+            // иначе если (...) то ...
             auto nested = std::make_shared<Stmt>();
             nested->kind = StmtKind::If;
             nested->line = cur().line; nested->col = cur().col;
@@ -182,9 +198,8 @@ StmtPtr Parser::parseIf() {
             nested->thenBranch = parseBlockIndent();
             skipSeparators();
             if (match(TokKind::KwElse)) {
-                if (match(TokKind::KwIf)) {
-                    // рекурсивный иначе если
-                    --pos_; --pos_; // откатываемся на KwIf
+                if (check(TokKind::KwIf)) {
+                    --pos_;   // откатываем KwIf, чтобы parseIf обработал
                     nested->elseBranch = parseIf();
                 } else {
                     skipSeparators();
@@ -219,14 +234,13 @@ StmtPtr Parser::parseFor() {
     expect(TokKind::KwFor, "'для'");
     expect(TokKind::LParen, "'('");
 
-    // пусть <тип> и будет <expr>   → классический for
+    // Классический: для (пусть <тип> и будет ...; ...; пусть ... станет ...)
     if (check(TokKind::KwLet)) {
         s->kind = StmtKind::ForClassic;
         s->forInit = parseLetStmt();
         match(TokKind::Semicolon);
         s->cond = parseExpr();
         expect(TokKind::Semicolon, "';'");
-        // шаг — это оператор "пусть <target> станет <expr>" без ; на конце
         if (!check(TokKind::KwLet)) {
             error("ОшибкаСинтаксиса", "Ожидалось 'пусть' в шаге цикла");
         }
@@ -240,7 +254,9 @@ StmtPtr Parser::parseFor() {
 
     // для (<имя> в <колл>) делать
     s->kind = StmtKind::ForIn;
-    if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя переменной цикла");
+    if (!check(TokKind::Ident)) {
+        error("ОшибкаСинтаксиса", "Ожидалось имя переменной цикла");
+    }
     s->loopVar = cur().text; ++pos_;
     expect(TokKind::KwIn, "'в'");
     s->loopColl = parseExpr();
@@ -310,55 +326,71 @@ StmtPtr Parser::parseBreakContinue(TokKind k) {
     return s;
 }
 
+// [неизменяемый|изменяемый] функция <имя>(<тип> <имя>; ...) [возврат <тип>] <блок>
 StmtPtr Parser::parseFunction() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::FunctionDecl;
     s->line = cur().line; s->col = cur().col;
 
-    if (match(TokKind::KwImmutable)) s->isImmutable = true;
-    else if (match(TokKind::KwMutable)) s->isMutable = true;
+    if (match(TokKind::KwImmutable))      s->isImmutable = true;
+    else if (match(TokKind::KwMutable))   s->isMutable   = true;
 
     expect(TokKind::KwFunction, "'функция'");
-    if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя функции");
-    s->funcName = cur().text; ++pos_;
+
+    // Имя — Ident или KwCreate ("создать" не в keywords, придёт Ident)
+    if (check(TokKind::Ident)) {
+        s->funcName = cur().text; ++pos_;
+    } else {
+        error("ОшибкаСинтаксиса", "Ожидалось имя функции");
+    }
     s->isConstructor = (s->funcName == "создать");
 
     if (match(TokKind::LParen)) {
         if (!check(TokKind::RParen)) {
             do {
                 Param p;
-                if (!isTypeToken(cur())) error("ОшибкаСинтаксиса", "Ожидался тип параметра");
+                if (!isTypeToken(cur())) {
+                    error("ОшибкаСинтаксиса", "Ожидался тип параметра");
+                }
                 p.type = typeFromToken(cur()); ++pos_;
-                if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя параметра");
+                if (!check(TokKind::Ident)) {
+                    error("ОшибкаСинтаксиса", "Ожидалось имя параметра");
+                }
                 p.name = cur().text; ++pos_;
                 s->params.push_back(p);
             } while (match(TokKind::Semicolon));
         }
         expect(TokKind::RParen, "')'");
     }
+
     if (match(TokKind::KwReturn)) {
-        if (!isTypeToken(cur()) && !check(TokKind::KwTypeNull)) {
+        if (!isTypeToken(cur())) {
             error("ОшибкаСинтаксиса", "Ожидался тип возврата");
         }
         s->returnType = typeFromToken(cur());
-        if (s->returnType.empty()) s->returnType = "ничего";
         ++pos_;
     } else {
         s->returnType = "ничего";
     }
+
     skipSeparators();
     s->funcBody = parseBlockIndent();
     return s;
 }
 
+// класс <Имя> [наследует <Имя>] <блок с полями и методами>
 StmtPtr Parser::parseClass() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::ClassDecl; s->line = cur().line; s->col = cur().col;
     expect(TokKind::KwClass, "'класс'");
-    if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя класса");
+    if (!check(TokKind::Ident)) {
+        error("ОшибкаСинтаксиса", "Ожидалось имя класса");
+    }
     s->className = cur().text; ++pos_;
     if (match(TokKind::KwExtends)) {
-        if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя базового класса");
+        if (!check(TokKind::Ident)) {
+            error("ОшибкаСинтаксиса", "Ожидалось имя базового класса");
+        }
         s->baseName = cur().text; ++pos_;
     }
     skipSeparators();
@@ -373,13 +405,18 @@ StmtPtr Parser::parseClass() {
             auto f = std::make_shared<Stmt>();
             f->kind = StmtKind::VarDecl;
             f->line = cur().line; f->col = cur().col;
-            if (!isTypeToken(cur())) error("ОшибкаСинтаксиса", "Ожидался тип поля");
+            if (!isTypeToken(cur())) {
+                error("ОшибкаСинтаксиса", "Ожидался тип поля");
+            }
             f->typeName = typeFromToken(cur()); ++pos_;
-            if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя поля");
+            if (!check(TokKind::Ident)) {
+                error("ОшибкаСинтаксиса", "Ожидалось имя поля");
+            }
             f->varName = cur().text; ++pos_;
             s->classMembers.push_back(f);
         } else if (check(TokKind::KwFunction) ||
-                   check(TokKind::KwImmutable) || check(TokKind::KwMutable) ||
+                   check(TokKind::KwImmutable) ||
+                   check(TokKind::KwMutable) ||
                    check(TokKind::KwOverride)) {
             match(TokKind::KwOverride);
             s->classMembers.push_back(parseFunction());
@@ -404,7 +441,9 @@ StmtPtr Parser::parseSimpleOrAssign() {
     return s;
 }
 
-// ---------- Выражения ----------
+// ============================================================
+//                          ВЫРАЖЕНИЯ
+// ============================================================
 ExprPtr Parser::parseExpr() { return parseOr(); }
 
 ExprPtr Parser::parseOr() {
@@ -418,6 +457,7 @@ ExprPtr Parser::parseOr() {
     }
     return l;
 }
+
 ExprPtr Parser::parseAnd() {
     auto l = parseEquality();
     while (check(TokKind::And)) {
@@ -429,6 +469,7 @@ ExprPtr Parser::parseAnd() {
     }
     return l;
 }
+
 ExprPtr Parser::parseEquality() {
     auto l = parseComparison();
     while (check(TokKind::Eq) || check(TokKind::Ne)) {
@@ -441,6 +482,7 @@ ExprPtr Parser::parseEquality() {
     }
     return l;
 }
+
 ExprPtr Parser::parseComparison() {
     auto l = parseTerm();
     while (check(TokKind::Lt) || check(TokKind::Gt)
@@ -460,6 +502,7 @@ ExprPtr Parser::parseComparison() {
     }
     return l;
 }
+
 ExprPtr Parser::parseTerm() {
     auto l = parseFactor();
     while (check(TokKind::Plus) || check(TokKind::Minus)) {
@@ -472,6 +515,7 @@ ExprPtr Parser::parseTerm() {
     }
     return l;
 }
+
 ExprPtr Parser::parseFactor() {
     auto l = parseUnary();
     while (check(TokKind::Star) || check(TokKind::Slash) || check(TokKind::Percent)) {
@@ -489,6 +533,7 @@ ExprPtr Parser::parseFactor() {
     }
     return l;
 }
+
 ExprPtr Parser::parseUnary() {
     if (check(TokKind::Minus) || check(TokKind::Not)) {
         auto e = std::make_shared<Expr>();
@@ -500,6 +545,7 @@ ExprPtr Parser::parseUnary() {
     }
     return parsePostfix();
 }
+
 ExprPtr Parser::parsePostfix() {
     auto e = parsePrimary();
     for (;;) {
@@ -526,7 +572,9 @@ ExprPtr Parser::parsePostfix() {
             m->kind = ExprKind::Member;
             m->line = cur().line; m->col = cur().col;
             m->left = e; ++pos_;
-            if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса", "Ожидалось имя поля");
+            if (!check(TokKind::Ident)) {
+                error("ОшибкаСинтаксиса", "Ожидалось имя поля");
+            }
             m->name = cur().text; ++pos_;
             e = m;
         } else break;
@@ -534,6 +582,7 @@ ExprPtr Parser::parsePostfix() {
     return e;
 }
 
+// Строка с интерполяцией {выражение}
 ExprPtr Parser::parseInterpString(const Token& t) {
     auto e = std::make_shared<Expr>();
     e->kind = ExprKind::Interp;
@@ -621,8 +670,9 @@ ExprPtr Parser::parsePrimary() {
             ++pos_;
             auto e = std::make_shared<Expr>();
             e->kind = ExprKind::New; e->line = t.line; e->col = t.col;
-            if (!check(TokKind::Ident)) error("ОшибкаСинтаксиса",
-                "Ожидалось имя класса после 'новый'");
+            if (!check(TokKind::Ident)) {
+                error("ОшибкаСинтаксиса", "Ожидалось имя класса после 'новый'");
+            }
             e->callee = parsePostfix();
             return e;
         }
@@ -654,7 +704,8 @@ ExprPtr Parser::parsePrimary() {
             expect(TokKind::RParen, "')'");
             return e;
         }
-        // Графические функции обрабатываем как обычные Call
+
+        // ---- Графика ----
         case TokKind::KwWindow:
         case TokKind::KwDrawPoint:
         case TokKind::KwDrawLine:
@@ -688,6 +739,7 @@ ExprPtr Parser::parsePrimary() {
             expect(TokKind::RParen, "')'");
             return e;
         }
+
         case TokKind::LParen: {
             ++pos_;
             auto e = parseExpr();
@@ -702,6 +754,22 @@ ExprPtr Parser::parsePrimary() {
                 do { e->elements.push_back(parseExpr()); } while (match(TokKind::Semicolon));
             }
             expect(TokKind::RBracket, "']'");
+            return e;
+        }
+        case TokKind::LBrace: {
+            // словарь {"ключ": значение; ...}
+            ++pos_;
+            auto e = std::make_shared<Expr>();
+            e->kind = ExprKind::DictLit; e->line = t.line; e->col = t.col;
+            if (!check(TokKind::RBrace)) {
+                do {
+                    auto k = parseExpr();
+                    expect(TokKind::Colon, "':'");
+                    auto v = parseExpr();
+                    e->pairs.emplace_back(k, v);
+                } while (match(TokKind::Semicolon));
+            }
+            expect(TokKind::RBrace, "'}'");
             return e;
         }
         case TokKind::Ident: {
