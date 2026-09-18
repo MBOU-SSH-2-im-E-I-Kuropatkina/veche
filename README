@@ -17,22 +17,20 @@
 
 ---
 
-## Сборка одной командой (Windows, cmd)
+## Сборка  (Windows)
 
 Из корня проекта:
 
-```bat
-g++ -std=c++17 -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -static -static-libgcc -static-libstdc++ -o veche.exe src\*.cpp -I src
+Для pwsh (PowerShell):
+
+```pwsh
+$srcs = (Get-ChildItem src\*.cpp).FullName; g++ -std=c++17 -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -static -static-libgcc -static-libstdc++ -o veche.exe $srcs -I src
 ```
 
-Если `cmd` не раскрывает `src\*.cpp` — перечислите файлы вручную:
+Для cmd (командной строки):
 
 ```bat
-g++ -std=c++17 -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -static -static-libgcc -static-libstdc++ -o veche.exe ^
-    src\main.cpp src\lexer.cpp src\parser.cpp src\ast.cpp ^
-    src\analyzer.cpp src\interpreter.cpp src\value.cpp ^
-    src\builtins.cpp src\errors.cpp src\utf8.cpp ^
-    -I src
+g++ -std=c++17 -O2 -Wall -Wextra -finput-charset=UTF-8 -fexec-charset=UTF-8 -static -static-libgcc -static-libstdc++ -o veche.exe src\*.cpp -I src
 ```
 
 Флаги `-static -static-libgcc -static-libstdc++` нужны, чтобы `veche.exe`
@@ -274,4 +272,8 @@ veche examples\hello.veche
 
 ## Лицензия
 
-Учебный проект. Используйте свободно.
+Учебный проект. Распространяется под лицензией MIT.
+
+## Разработчики
+
+**Главный разработчик**: `Timon4ikRU`
