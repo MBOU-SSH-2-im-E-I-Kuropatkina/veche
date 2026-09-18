@@ -39,7 +39,6 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"неизменяемый",  TokKind::KwImmutable},
     {"изменяемый",    TokKind::KwMutable},
     {"возврат",       TokKind::KwReturn},
-    {"создать",       TokKind::KwCreate},
     {"новый",         TokKind::KwNew},
     {"сам",           TokKind::KwSelf},
     {"базовый",       TokKind::KwBase},
@@ -80,6 +79,9 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"и",   TokKind::And},
     {"или", TokKind::Or},
     {"не",  TokKind::Not},
+
+    // ВНИМАНИЕ: "создать" НЕ здесь — приходит как Ident,
+    // чтобы можно было назвать функцию создать(...).
 };
 
 Lexer::Lexer(std::string src, std::string file)
@@ -198,7 +200,6 @@ std::vector<Token> Lexer::tokenize() {
                 size_t i = 0;
                 while (i < raw.size() && (raw[i] == ' ' || raw[i] == '\t')) ++i;
 
-                // @-комментарий (первый непробельный символ — @)
                 if (i < raw.size() && raw[i] == '@') {
                     inBlockComment_ = !inBlockComment_;
                     while (peek() != '\n' && peek() != 0) advance();
@@ -212,7 +213,6 @@ std::vector<Token> Lexer::tokenize() {
                     lineStart_ = true;
                     continue;
                 }
-                // пустая строка — пропускаем без Newline
                 if (i >= raw.size()) {
                     while (peek() != '\n' && peek() != 0) advance();
                     if (peek() == '\n') advance();
@@ -295,6 +295,8 @@ std::vector<Token> Lexer::tokenize() {
         switch (c) {
             case '(': push(TokKind::LParen); break;
             case ')': push(TokKind::RParen); break;
+            case '{': push(TokKind::LBrace); break;
+            case '}': push(TokKind::RBrace); break;
             case '[': push(TokKind::LBracket); break;
             case ']': push(TokKind::RBracket); break;
             case ',': push(TokKind::Comma); break;
