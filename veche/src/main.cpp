@@ -91,7 +91,7 @@ static void printHelp() {
         "  veche -h         помощь\n";
 }
 static void printVersion() {
-    std::cout << "Вече 1.1 (C++17, TDM-GCC-64, GDI32-графика)\n";
+    std::cout << "Вече 2.0 (C++17, TDM-GCC-64, GDI32-графика)\n";
 }
 
 int main(int argc, char** argv) {
