@@ -8,6 +8,7 @@
 #include "analyzer.h"
 #include "interpreter.h"
 #include "errors.h"
+#include "graphics.h"
 
 #ifdef _WIN32
 #  include <windows.h>
@@ -24,17 +25,16 @@ static std::string readFile(const std::string& path) {
 }
 
 static std::string resolvePath(const std::string& arg) {
-    // if extension given, use as-is
     auto ends = [](const std::string& s, const std::string& suf) {
-        return s.size() >= suf.size() && s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
+        return s.size() >= suf.size()
+            && s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
     };
     if (ends(arg, ".veche") || ends(arg, ".vech")) return arg;
-    // try .veche then .vech
     std::ifstream f1(arg + ".veche");
     if (f1) return arg + ".veche";
     std::ifstream f2(arg + ".vech");
     if (f2) return arg + ".vech";
-    return arg; // let caller fail with message
+    return arg;
 }
 
 static int runSource(const std::string& src, const std::string& file) {
@@ -49,16 +49,18 @@ static int runSource(const std::string& src, const std::string& file) {
 
         Interpreter interp;
         interp.setSource(file, lex.lines());
-        // register classes
-        // (already handled inside interpreter exec of ClassDecl)
         interp.run(prog);
+
+        graphics::closeWindow();
         return 0;
     } catch (VecheError& e) {
         if (e.file.empty()) e.file = file;
         printError(e);
+        graphics::closeWindow();
         return 1;
     } catch (std::exception& e) {
         std::cerr << "[Вече: ОшибкаВнутренняя] " << e.what() << "\n";
+        graphics::closeWindow();
         return 2;
     }
 }
@@ -67,8 +69,7 @@ static int repl() {
     std::cout << "Вече REPL. Введите 'выход' для завершения.\n";
     std::string line;
     while (true) {
-        std::cout << "вече> ";
-        std::cout.flush();
+        std::cout << "вече> "; std::cout.flush();
         if (!std::getline(std::cin, line)) break;
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line == "выход" || line == "exit" || line == "quit") break;
@@ -89,9 +90,8 @@ static void printHelp() {
         "  veche -v         версия\n"
         "  veche -h         помощь\n";
 }
-
 static void printVersion() {
-    std::cout << "Вече 1.0 (C++17, TDM-GCC-64)\n";
+    std::cout << "Вече 1.1 (C++17, TDM-GCC-64, GDI32-графика)\n";
 }
 
 int main(int argc, char** argv) {
@@ -100,14 +100,11 @@ int main(int argc, char** argv) {
     SetConsoleCP(CP_UTF8);
 #endif
 
-    if (argc < 2) {
-        printHelp();
-        return 0;
-    }
+    if (argc < 2) { printHelp(); return 0; }
     std::string a = argv[1];
-    if (a == "-h" || a == "--help") { printHelp(); return 0; }
+    if (a == "-h" || a == "--help")    { printHelp(); return 0; }
     if (a == "-v" || a == "--version") { printVersion(); return 0; }
-    if (a == "-i" || a == "-r") return repl();
+    if (a == "-i" || a == "-r")        return repl();
 
     std::string path = resolvePath(a);
     try {

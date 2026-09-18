@@ -6,25 +6,45 @@
 namespace veche {
 
 enum class TokKind {
-    End, Ident, Int, Double, String, Word, // Word not lexically distinct; used by parser
-    LParen, RParen, LBrace, RBrace, LBracket, RBracket,
+    End, Newline, Indent, Dedent,
+    Ident, Int, Double, String,
+    LParen, RParen, LBracket, RBracket,
     Comma, Dot, Colon, Semicolon, Arrow,
     Plus, Minus, Star, Slash, Percent,
     Assign, Eq, Ne, Lt, Gt, Le, Ge,
     And, Or, Not,
-    True, False, Null,
-    // keywords
-    KwConst, KwStrict, KwTypeInt, KwTypeDouble, KwTypeWord, KwTypeString,
+    True, False,
+
+    // типы
+    KwTypeInt, KwTypeDouble, KwTypeString, KwTypeChar, KwTypeWord,
     KwTypeBool, KwTypeList, KwTypeDict, KwTypeTuple, KwTypeNull,
+
+    // управление
     KwIf, KwElse, KwWhile, KwFor, KwIn, KwBreak, KwContinue,
-    KwReturn, KwFunction, KwClass, KwExtends, KwOverride, KwBase,
-    KwNew, KwSelf, KwTry, KwCatch, KwFinally, KwRaise, KwPrint,
-    KwInput
+    KwDo, KwThen,
+
+    // функции/классы
+    KwFunction, KwClass, KwExtends, KwOverride,
+    KwImmutable, KwMutable, KwReturn, KwNew, KwSelf, KwBase,
+    KwCreate, KwEmpty,
+
+    // переменные
+    KwLet, KwBe, KwBecome, KwConst, KwStrict,
+
+    // ошибки
+    KwTry, KwCatch, KwFinally, KwRaise,
+
+    // ввод/вывод
+    KwPrint, KwInput,
+
+    // графика
+    KwWindow, KwDrawPoint, KwDrawLine, KwDrawRect,
+    KwColor, KwClear, KwSleep, KwClose
 };
 
 struct Token {
     TokKind kind;
-    std::string text;   // raw lexeme
+    std::string text;
     int64_t i = 0;
     double  d = 0.0;
     int line = 1, col = 1;
@@ -44,15 +64,19 @@ private:
     int line_ = 1, col_ = 1;
     std::vector<std::string> lines_;
 
+    std::vector<int> indentStack_;
+    bool lineStart_ = true;
+    bool inBlockComment_ = false;
+
     uint32_t peek();
     uint32_t peek2();
     uint32_t advance();
     bool match(uint32_t cp);
-    void skipWhitespaceAndComments();
+    void skipInlineWhitespace();
+    int  currentIndentFromLine();
     Token makeIdentOrKeyword(const std::string& s, int ln, int cl);
     Token lexNumber();
     Token lexString();
-    Token lexWordOrIdent();
 };
 
 } // namespace veche

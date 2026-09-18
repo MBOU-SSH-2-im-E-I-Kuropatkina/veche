@@ -26,24 +26,26 @@ private:
     [[noreturn]] void errorAt(const Token& t, const std::string& kind,
                               const std::string& msg);
     std::string srcLine(int ln) const;
+    std::string typeFromToken(const Token& t);
+    bool isTypeToken(const Token& t);
 
-    // statements
+    void skipSeparators();   // Newline / Semicolon
+    StmtPtr parseBlockIndent(); // ожидает Indent ... Dedent
+
     StmtPtr parseStatement();
-    StmtPtr parseVarDecl(bool isConst);
+    StmtPtr parseVarDecl();
+    StmtPtr parseLetStmt();
     StmtPtr parseIf();
     StmtPtr parseWhile();
     StmtPtr parseFor();
-    StmtPtr parseFunction();
-    StmtPtr parseClass();
     StmtPtr parseReturn();
     StmtPtr parseTry();
     StmtPtr parseRaise();
-    StmtPtr parseBlock();
-    StmtPtr parseSimpleOrAssign();
-    StmtPtr parsePrintOrExpr();
     StmtPtr parseBreakContinue(TokKind k);
+    StmtPtr parseFunction();
+    StmtPtr parseClass();
+    StmtPtr parseSimpleOrAssign();
 
-    // expressions (precedence climbing)
     ExprPtr parseExpr();
     ExprPtr parseOr();
     ExprPtr parseAnd();
@@ -54,9 +56,7 @@ private:
     ExprPtr parseUnary();
     ExprPtr parsePostfix();
     ExprPtr parsePrimary();
-
     ExprPtr parseInterpString(const Token& t);
-    std::string typeFromToken(const Token& t);
 };
 
 } // namespace veche

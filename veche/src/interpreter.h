@@ -8,13 +8,12 @@
 
 namespace veche {
 
-// Область видимости переменных/методов.
 struct Scope {
     std::unordered_map<std::string, ValuePtr> vars;
     std::unordered_map<std::string, bool> consts;
     std::shared_ptr<Scope> parent;
-    ValuePtr self;                          // для методов
-    std::shared_ptr<ClassInfo> klass;       // текущий класс (для `базовый`)
+    ValuePtr self;
+    std::shared_ptr<ClassInfo> klass;
     std::unordered_map<std::string, std::shared_ptr<FunctionDecl>> methods;
 
     ValuePtr* find(const std::string& n) {
@@ -41,8 +40,7 @@ public:
     void execStmt(const StmtPtr& s, ScopePtr env);
 
     void setSource(const std::string& file, const std::vector<std::string>& lines) {
-        file_ = file;
-        lines_ = lines;
+        file_ = file; lines_ = lines;
     }
     void registerClass(std::shared_ptr<ClassInfo> c) { classes_[c->name] = c; }
     void setGlobals(const std::unordered_map<std::string, ValuePtr>& g) { globals_ = g; }
@@ -59,8 +57,6 @@ private:
 
     [[noreturn]] void raise(const std::string& kind, const std::string& msg);
 
-    // enclosing — scope, из которого вызвана функция. Он становится
-    // parent нового scope функции, обеспечивая лексическую видимость.
     ValuePtr callFunction(std::shared_ptr<FunctionDecl> fn,
                           const std::vector<ValuePtr>& args,
                           ValuePtr self,

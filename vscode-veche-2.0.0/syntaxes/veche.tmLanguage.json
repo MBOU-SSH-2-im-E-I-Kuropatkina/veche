@@ -4,13 +4,15 @@
   "scopeName": "source.veche",
   "fileTypes": [".veche", ".vech"],
   "patterns": [
-    { "include": "#comments" },
+    { "include": "#blockComment" },
+    { "include": "#lineComment" },
     { "include": "#strings" },
     { "include": "#interpolation" },
     { "include": "#numbers" },
     { "include": "#keywords" },
     { "include": "#types" },
     { "include": "#constants" },
+    { "include": "#graphics" },
     { "include": "#builtins" },
     { "include": "#errors" },
     { "include": "#operators" },
@@ -21,16 +23,25 @@
   ],
   "repository": {
 
-    "comments": {
+    "blockComment": {
+      "patterns": [
+        {
+          "name": "comment.block.veche",
+          "begin": "^\\s*@\\s*$",
+          "end": "^\\s*@\\s*$"
+        },
+        {
+          "name": "comment.line.at.veche",
+          "match": "^\\s*@.*$"
+        }
+      ]
+    },
+
+    "lineComment": {
       "patterns": [
         {
           "name": "comment.line.double-slash.veche",
           "match": "//.*$"
-        },
-        {
-          "name": "comment.block.veche",
-          "begin": "/\\*",
-          "end": "\\*/"
         }
       ]
     },
@@ -61,6 +72,7 @@
           "patterns": [
             { "include": "#numbers" },
             { "include": "#keywords" },
+            { "include": "#types" },
             { "include": "#constants" },
             { "include": "#variables" },
             { "include": "#operators" }
@@ -86,15 +98,15 @@
       "patterns": [
         {
           "name": "keyword.control.veche",
-          "match": "\\b(если|иначе|пока|для|в|прервать|продолжить|возврат|попытка|перехват|наконец|поднять)\\b"
+          "match": "\\b(если|иначе|то|пока|для|в|делать|прервать|продолжить|возврат|попытка|перехват|наконец|поднять)\\b"
         },
         {
           "name": "keyword.declaration.veche",
-          "match": "\\b(константа|строгое|функция|класс|наследует|переопределить)\\b"
+          "match": "\\b(функция|класс|наследует|переопределить|неизменяемый|изменяемый|пусть|будет|станет|постоянное|строгое|пустой)\\b"
         },
         {
           "name": "keyword.other.veche",
-          "match": "\\b(новый|себя|базовый)\\b"
+          "match": "\\b(новый|создать|сам|базовый)\\b"
         },
         {
           "name": "keyword.operator.word.veche",
@@ -107,7 +119,7 @@
       "patterns": [
         {
           "name": "storage.type.veche",
-          "match": "\\b(целое|дробное|слово|строка|булево|список|словарь|кортеж|ничто)\\b"
+          "match": "\\b(целое|дробь|строка|символ|слово|булево|список|словарь|кортеж|ничто|ничего)\\b"
         }
       ]
     },
@@ -120,7 +132,16 @@
         },
         {
           "name": "constant.language.null.veche",
-          "match": "\\bничто\\b"
+          "match": "\\b(ничто|ничего)\\b"
+        }
+      ]
+    },
+
+    "graphics": {
+      "patterns": [
+        {
+          "name": "support.function.graphics.veche",
+          "match": "\\b(окно|рисовать_точку|рисовать_линию|рисовать_прямоугольник|цвет|очистить|пауза|закрыть_окно)\\b"
         }
       ]
     },
@@ -129,7 +150,7 @@
       "patterns": [
         {
           "name": "support.function.builtin.veche",
-          "match": "\\b(печать|ввод)\\b"
+          "match": "\\b(вывод|ввод)\\b"
         }
       ]
     },
@@ -159,8 +180,8 @@
           "match": "[,;:]"
         },
         {
-          "name": "punctuation.definition.block.veche",
-          "match": "[{}\\[\\]()]"
+          "name": "punctuation.definition.veche",
+          "match": "[\\[\\](){}]"
         },
         {
           "name": "punctuation.accessor.veche",
