@@ -37,18 +37,28 @@ static std::string resolvePath(const std::string& arg) {
     return arg;
 }
 
-static int runSource(const std::string& src, const std::string& file) {
+// Лексер + парсер → программа. Бросает VecheError при синтаксисе.
+static std::vector<StmtPtr> parseSource(const std::string& src,
+                                        const std::string& file,
+                                        std::vector<std::string>& linesOut) {
+    Lexer lex(src, file);
+    auto toks = lex.tokenize();
+    linesOut = lex.lines();
+    Parser parser(std::move(toks), file, &linesOut);
+    return parser.parseProgram();
+}
+
+// Запуск файла — новый Interpreter, новый Scope.
+static int runFile(const std::string& src, const std::string& file) {
     try {
-        Lexer lex(src, file);
-        auto toks = lex.tokenize();
-        Parser parser(std::move(toks), file, &lex.lines());
-        auto prog = parser.parseProgram();
+        std::vector<std::string> lines;
+        auto prog = parseSource(src, file, lines);
 
         Analyzer an;
         an.analyze(prog);
 
         Interpreter interp;
-        interp.setSource(file, lex.lines());
+        interp.setSource(file, lines);
         interp.run(prog);
 
         graphics::closeWindow();
@@ -65,16 +75,37 @@ static int runSource(const std::string& src, const std::string& file) {
     }
 }
 
+// REPL: один Interpreter и один Scope на всю сессию.
 static int repl() {
     std::cout << "Вече REPL. Введите 'выход' для завершения.\n";
+
+    Interpreter interp;
+    ScopePtr    env = interp.makeGlobalScope();
+    interp.setSource("<repl>", {});
+
     std::string line;
     while (true) {
-        std::cout << "вече> "; std::cout.flush();
+        std::cout << "вече> ";
+        std::cout.flush();
         if (!std::getline(std::cin, line)) break;
         if (!line.empty() && line.back() == '\r') line.pop_back();
+
         if (line == "выход" || line == "exit" || line == "quit") break;
         if (line.empty()) continue;
-        runSource(line, "<repl>");
+
+        try {
+            std::vector<std::string> lines;
+            auto prog = parseSource(line, "<repl>", lines);
+            interp.setSource("<repl>", lines);
+            interp.runIn(prog, env);
+        } catch (VecheError& e) {
+            if (e.line <= 0) e.line = 1;
+            if (e.col  <= 0) e.col  = 1;
+            e.file = "<repl>";
+            printError(e);
+        } catch (std::exception& ex) {
+            std::cerr << "[Вече: ОшибкаВнутренняя] " << ex.what() << "\n";
+        }
     }
     return 0;
 }
@@ -90,8 +121,9 @@ static void printHelp() {
         "  veche -v         версия\n"
         "  veche -h         помощь\n";
 }
+
 static void printVersion() {
-    std::cout << "Вече 2.0 (C++17, TDM-GCC-64, GDI32-графика)\n";
+    std::cout << "Вече 2.1.0 (C++17, TDM-GCC-64, GDI32-графика)\n";
 }
 
 int main(int argc, char** argv) {
@@ -109,7 +141,7 @@ int main(int argc, char** argv) {
     std::string path = resolvePath(a);
     try {
         std::string src = readFile(path);
-        return runSource(src, path);
+        return runFile(src, path);
     } catch (std::exception& e) {
         std::cerr << "[Вече: ОшибкаВвода] " << e.what() << "\n";
         return 1;

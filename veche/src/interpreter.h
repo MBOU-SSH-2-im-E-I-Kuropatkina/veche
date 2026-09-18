@@ -36,6 +36,10 @@ class Interpreter {
 public:
     Interpreter();
     void run(const std::vector<StmtPtr>& prog);
+    // Выполнить программу в уже существующем окружении.
+    // Используется REPL-ом, чтобы переменные сохранялись между строками.
+    void runIn(const std::vector<StmtPtr>& prog, ScopePtr env);
+
     ValuePtr evalExpr(const ExprPtr& e, ScopePtr env);
     void execStmt(const StmtPtr& s, ScopePtr env);
 
@@ -44,6 +48,9 @@ public:
     }
     void registerClass(std::shared_ptr<ClassInfo> c) { classes_[c->name] = c; }
     void setGlobals(const std::unordered_map<std::string, ValuePtr>& g) { globals_ = g; }
+
+    // Создать новое пустое окружение (для REPL).
+    ScopePtr makeGlobalScope() { return std::make_shared<Scope>(); }
 
 private:
     std::unordered_map<std::string, std::shared_ptr<ClassInfo>> classes_;

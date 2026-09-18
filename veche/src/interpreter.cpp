@@ -41,13 +41,18 @@ static bool isAssignableStrict(const std::string& typeName, Type vt) {
     if (typeName == "словарь") return vt == Type::Словарь;
     if (typeName == "кортеж")  return vt == Type::Кортеж;
     if (typeName == "ничто")   return vt == Type::Ничто;
-    return true; // для классов — не проверяем строго
+    return true; // для классов не проверяем строго
 }
 
+// ============================================================
+//                      ВЫРАЖЕНИЯ
+// ============================================================
 ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
     if (!e) return Value::makeNull();
     switch (e->kind) {
-        case ExprKind::Literal: return e->literal;
+
+        case ExprKind::Literal:
+            return e->literal;
 
         case ExprKind::Variable: {
             if (env) {
@@ -57,7 +62,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             auto it = globals_.find(e->name);
             if (it != globals_.end()) return it->second;
 
-            // встроенные функции — как объекты-функции с именем
+            // встроенные функции — как значения-функции с именем
             if (e->name == "__вывод__" || e->name == "__ввод__"
              || e->name == "__окно__" || e->name == "__цвет__"
              || e->name == "__очистить__" || e->name == "__точка__"
@@ -74,6 +79,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             if (env && env->self) return env->self;
             raise("ОшибкаИмени", "'сам' вне метода");
         }
+
         case ExprKind::Base: {
             if (!env || !env->klass || !env->klass->base)
                 raise("ОшибкаИмени", "'базовый' вне класса с наследованием");
@@ -98,20 +104,24 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             auto b = evalExpr(e->right, env);
             return binaryOp(e->op, a, b);
         }
+
         case ExprKind::Unary: {
             auto v = evalExpr(e->right, env);
             return unaryOp(e->op, v);
         }
+
         case ExprKind::ListLit: {
             auto l = Value::makeList();
             for (auto& el : e->elements) l->list->push_back(evalExpr(el, env));
             return l;
         }
+
         case ExprKind::TupleLit: {
             auto l = Value::makeTuple();
             for (auto& el : e->elements) l->tuple->push_back(evalExpr(el, env));
             return l;
         }
+
         case ExprKind::DictLit: {
             auto d = Value::makeDict();
             for (auto& kv : e->pairs) {
@@ -121,6 +131,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             }
             return d;
         }
+
         case ExprKind::Interp: {
             std::string out;
             for (auto& seg : e->segments) {
@@ -133,16 +144,23 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             }
             return Value::makeString(out);
         }
+
         case ExprKind::Index: {
             auto t = evalExpr(e->target, env);
             auto i = evalExpr(e->index, env);
+
             if (t->type == Type::Список) {
+                if (i->type != Type::Целое)
+                    raise("ОшибкаТипа", "Индекс списка — целое");
                 int64_t idx = i->i;
                 if (idx < 0 || (size_t)idx >= t->list->size())
-                    raise("ОшибкаИндекса", "Индекс вне диапазона");
+                    raise("ОшибкаИндекса",
+                          "Индекс " + std::to_string(idx) + " вне диапазона");
                 return (*t->list)[idx];
             }
             if (t->type == Type::Кортеж) {
+                if (i->type != Type::Целое)
+                    raise("ОшибкаТипа", "Индекс кортежа — целое");
                 int64_t idx = i->i;
                 if (idx < 0 || (size_t)idx >= t->tuple->size())
                     raise("ОшибкаИндекса", "Индекс вне диапазона");
@@ -154,23 +172,30 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                 return it->second;
             }
             if (t->type == Type::Строка || t->type == Type::Слово) {
+                if (i->type != Type::Целое)
+                    raise("ОшибкаТипа", "Индекс строки — целое");
                 int64_t idx = i->i;
-                if (idx < 0) raise("ОшибкаИндекса", "Отрицательный индекс");
-                size_t pos = 0; int64_t cur = 0;
+                if (idx < 0)
+                    raise("ОшибкаИндекса", "Отрицательный индекс");
+                size_t pos = 0;
+                int64_t cur = 0;
                 while (pos < t->s.size()) {
                     size_t st = pos;
                     utf8::decode(t->s, pos);
                     if (cur == idx) {
                         std::string ch = t->s.substr(st, pos - st);
-                        if (t->type == Type::Слово) return Value::makeWord(ch);
+                        if (t->type == Type::Слово)
+                            return Value::makeWord(ch);
                         return Value::makeString(ch);
                     }
                     ++cur;
                 }
                 raise("ОшибкаИндекса", "Индекс вне диапазона");
             }
-            raise("ОшибкаТипа", "Индексация неприменима к " + t->typeName());
+            raise("ОшибкаТипа",
+                  "Индексация неприменима к " + t->typeName());
         }
+
         case ExprKind::Member: {
             auto t = evalExpr(e->left, env);
             if (t->type == Type::Объект) {
@@ -186,10 +211,13 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                     }
                     ci = ci->base;
                 }
-                raise("ОшибкаИмени", "Поле/метод '" + e->name + "' не найден");
+                raise("ОшибкаИмени",
+                      "Поле/метод '" + e->name + "' не найден");
             }
-            raise("ОшибкаТипа", "Обращение к полю у " + t->typeName());
+            raise("ОшибкаТипа",
+                  "Обращение к полю у " + t->typeName());
         }
+
         case ExprKind::Call: {
             // встроенные
             if (e->callee->kind == ExprKind::Variable) {
@@ -245,7 +273,8 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                     return builtinCloseWindow(args);
                 }
             }
-            // метод
+
+            // метод объекта
             if (e->callee->kind == ExprKind::Member) {
                 auto obj = evalExpr(e->callee->left, env);
                 if (obj->type == Type::Объект) {
@@ -254,15 +283,26 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                         auto m = ci->methods.find(e->callee->name);
                         if (m != ci->methods.end()) {
                             std::vector<ValuePtr> args;
-                            for (auto& a : e->args) args.push_back(evalExpr(a, env));
+                            for (auto& a : e->args)
+                                args.push_back(evalExpr(a, env));
                             return callFunction(m->second, args, obj, ci, env);
                         }
                         ci = ci->base;
                     }
+                    auto it = obj->obj->fields.find(e->callee->name);
+                    if (it != obj->obj->fields.end()
+                        && it->second->type == Type::Функция) {
+                        std::vector<ValuePtr> args;
+                        for (auto& a : e->args)
+                            args.push_back(evalExpr(a, env));
+                        return callFunction(it->second->func, args, obj,
+                                            obj->obj->klass, env);
+                    }
                     raise("ОшибкаИмени",
-                        "Метод '" + e->callee->name + "' не найден");
+                          "Метод '" + e->callee->name + "' не найден");
                 }
             }
+
             // обычная функция
             auto callee = evalExpr(e->callee, env);
             if (callee->type == Type::Функция && callee->func) {
@@ -274,14 +314,18 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             }
             raise("ОшибкаТипа", "Вызов не-функции");
         }
+
         case ExprKind::New: {
             if (e->callee->kind == ExprKind::Call) {
                 auto calleeExpr = e->callee->callee;
                 auto ci = classes_.find(calleeExpr->name);
                 if (ci == classes_.end())
-                    raise("ОшибкаИмени", "Класс '" + calleeExpr->name + "' не найден");
+                    raise("ОшибкаИмени",
+                          "Класс '" + calleeExpr->name + "' не найден");
+
                 auto obj = std::make_shared<Object>();
                 obj->klass = ci->second;
+
                 auto cur = ci->second;
                 while (cur) {
                     for (auto& m : cur->members) {
@@ -297,6 +341,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                     cur = cur->base;
                 }
                 auto v = Value::makeObject(obj);
+
                 auto ci2 = ci->second;
                 while (ci2) {
                     auto ctor = ci2->methods.find("создать");
@@ -313,11 +358,15 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             }
             raise("ОшибкаСинтаксиса", "Ожидалось 'новый Класс(...)'");
         }
+
         default:
             raise("ОшибкаВнутренняя", "Неизвестный узел выражения");
     }
 }
 
+// ============================================================
+//                    БИНАРНЫЕ ОПЕРАЦИИ
+// ============================================================
 ValuePtr Interpreter::binaryOp(const std::string& op, ValuePtr a, ValuePtr b) {
     auto num = [](ValuePtr v) {
         return v->type == Type::Целое || v->type == Type::Дробное;
@@ -341,13 +390,15 @@ ValuePtr Interpreter::binaryOp(const std::string& op, ValuePtr a, ValuePtr b) {
             for (auto& x : *b->list) l->list->push_back(x);
             return l;
         }
-        // строковая конкатенация через + (оставлено по совместимости)
+        // строковая конкатенация через +
         bool as = a->type == Type::Строка || a->type == Type::Слово;
         bool bs = b->type == Type::Строка || b->type == Type::Слово;
+        if (as && bs) return Value::makeString(a->s + b->s);
         if (as || bs) return Value::makeString(a->toString() + b->toString());
 
         raise("ОшибкаТипа",
-            "Операция '+' неприменима к " + a->typeName() + " и " + b->typeName());
+              "Операция '+' неприменима к " + a->typeName()
+              + " и " + b->typeName());
     }
     if (op == "-") {
         if (!num(a) || !num(b)) raise("ОшибкаТипа", "'-' требует чисел");
@@ -418,14 +469,18 @@ ValuePtr Interpreter::unaryOp(const std::string& op, ValuePtr a) {
     raise("ОшибкаВнутренняя", "Неизвестный унарный оператор " + op);
 }
 
+// ============================================================
+//                     ПРИСВАИВАНИЕ
+// ============================================================
 void Interpreter::assignTo(const ExprPtr& target, ValuePtr val, ScopePtr env) {
     if (target->kind == ExprKind::Variable) {
         if (env) {
             ValuePtr* p = env->find(target->name);
             if (p) {
-                if (env->isConst(target->name))
+                if (env->isConst(target->name)) {
                     raise("ОшибкаИмени",
-                        "Нельзя изменить константу '" + target->name + "'");
+                          "Нельзя изменить константу '" + target->name + "'");
+                }
                 *p = val;
                 return;
             }
@@ -462,6 +517,9 @@ void Interpreter::assignTo(const ExprPtr& target, ValuePtr val, ScopePtr env) {
     raise("ОшибкаСинтаксиса", "Недопустимая цель присваивания");
 }
 
+// ============================================================
+//                       ВЫЗОВ ФУНКЦИИ
+// ============================================================
 ValuePtr Interpreter::callFunction(std::shared_ptr<FunctionDecl> fn,
                                    const std::vector<ValuePtr>& args,
                                    ValuePtr self,
@@ -471,16 +529,18 @@ ValuePtr Interpreter::callFunction(std::shared_ptr<FunctionDecl> fn,
     scope->parent = enclosing;
     scope->self = self;
     scope->klass = klass;
-    if (self && self->type == Type::Объект && self->obj)
+    if (self && self->type == Type::Объект && self->obj) {
         scope->methods = self->obj->klass->methods;
+    }
     if (args.size() != fn->params.size()) {
         raise("ОшибкаТипа",
-            "Функция '" + fn->name + "' ожидает "
-            + std::to_string(fn->params.size()) + " аргументов, получено "
-            + std::to_string(args.size()));
+              "Функция '" + fn->name + "' ожидает "
+              + std::to_string(fn->params.size()) + " аргументов, получено "
+              + std::to_string(args.size()));
     }
-    for (size_t i = 0; i < args.size(); ++i)
+    for (size_t i = 0; i < args.size(); ++i) {
         scope->vars[fn->params[i].name] = args[i];
+    }
     try {
         execStmt(fn->body, scope);
     } catch (ReturnSignal& r) {
@@ -489,6 +549,9 @@ ValuePtr Interpreter::callFunction(std::shared_ptr<FunctionDecl> fn,
     return Value::makeNull();
 }
 
+// ============================================================
+//                      ИНСТРУКЦИИ
+// ============================================================
 void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
     if (!s) return;
     switch (s->kind) {
@@ -500,51 +563,73 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
             bool declaredString = (s->typeName == "строка");
             bool declaredWord   = (s->typeName == "слово");
 
+            // строгое — проверяем совместимость
             if (s->isStrict && !isAssignableStrict(s->typeName, v->type)) {
                 raise("ОшибкаТипа",
-                    "Переменная '" + s->varName + "' объявлена как '"
-                    + s->typeName + "', но значение имеет тип '"
-                    + v->typeName() + "'");
+                      "Переменная '" + s->varName + "' объявлена как '"
+                      + s->typeName + "', но значение имеет тип '"
+                      + v->typeName() + "'");
             }
+
+            // умное поведение: сумма строк -> числовой тип
             bool fromConcat = false;
             if (s->init && s->init->kind == ExprKind::Binary
-                && s->init->op == "+") fromConcat = true;
-
+                && s->init->op == "+") {
+                fromConcat = true;
+            }
             if (!s->isStrict && !declaredString && !declaredWord
                 && v->type == Type::Строка && fromConcat) {
                 std::cerr << "[Вече] Предупреждение: значение переменной '"
-                          << s->varName << "' имеет тип 'строка', но объявлено как '"
-                          << s->typeName << "'. Сделать переменной типа 'строка'? (д/н) ";
+                          << s->varName
+                          << "' имеет тип 'строка', но объявлено как '"
+                          << s->typeName
+                          << "'. Сделать переменной типа 'строка'? (д/н) ";
                 std::string ans;
                 std::getline(std::cin, ans);
                 if (!userSaidYes(ans)) {
                     if (s->typeName == "целое") {
                         try { v = Value::makeInt(std::stoll(v->s)); }
-                        catch (...) { raise("ОшибкаТипа", "Нельзя привести к 'целое'"); }
+                        catch (...) {
+                            raise("ОшибкаТипа",
+                                  "Нельзя привести строку '" + v->s
+                                  + "' к 'целое'");
+                        }
                     } else if (s->typeName == "дробь") {
                         try { v = Value::makeDouble(std::stod(v->s)); }
-                        catch (...) { raise("ОшибкаТипа", "Нельзя привести к 'дробь'"); }
+                        catch (...) {
+                            raise("ОшибкаТипа",
+                                  "Нельзя привести строку '" + v->s
+                                  + "' к 'дробь'");
+                        }
                     } else if (s->typeName == "булево") {
-                        v = Value::makeBool(!v->s.empty() && v->s != "0" && v->s != "ложь");
+                        v = Value::makeBool(!v->s.empty()
+                                         && v->s != "0" && v->s != "ложь");
                     }
                 }
             }
 
+            // слово = без пробелов, '-' и '_'
             if (declaredWord && v->type == Type::Строка) {
                 char bad = firstBadCharInWord(v->s);
                 if (bad != 0) {
-                    std::cerr << "[Вече] Предупреждение: '" << v->s
-                              << "' содержит '" << bad
-                              << "' и не является 'словом'; тип понижен до 'строка'\n";
+                    std::cerr << "[Вече] Предупреждение: значение переменной '"
+                              << s->varName
+                              << "' не является 'словом' (содержит '"
+                              << bad
+                              << "'); тип переменной понижен до 'строка'\n";
                 } else {
                     v = Value::makeWord(v->s);
                 }
             }
+
             // символ = один codepoint
-            if (s->typeName == "символ" && (v->type == Type::Строка || v->type == Type::Слово)) {
-                size_t p = 0;
-                utf8::decode(v->s, p);
-                v = Value::makeWord(v->s.substr(0, p));
+            if (s->typeName == "символ"
+                && (v->type == Type::Строка || v->type == Type::Слово)) {
+                if (!v->s.empty()) {
+                    size_t p = 0;
+                    utf8::decode(v->s, p);
+                    v = Value::makeWord(v->s.substr(0, p));
+                }
             }
 
             if (!env) globals_[s->varName] = v;
@@ -603,8 +688,10 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
                 } else if (coll->type == Type::Кортеж) {
                     for (auto& v : *coll->tuple) runOne(v);
                 } else if (coll->type == Type::Словарь) {
-                    for (auto& kv : *coll->dict) runOne(Value::makeString(kv.first));
-                } else if (coll->type == Type::Строка || coll->type == Type::Слово) {
+                    for (auto& kv : *coll->dict)
+                        runOne(Value::makeString(kv.first));
+                } else if (coll->type == Type::Строка
+                        || coll->type == Type::Слово) {
                     size_t p = 0;
                     while (p < coll->s.size()) {
                         size_t st = p;
@@ -612,9 +699,10 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
                         runOne(Value::makeWord(coll->s.substr(st, p - st)));
                     }
                 } else {
-                    raise("ОшибкаТипа", "Нельзя итерировать по " + coll->typeName());
+                    raise("ОшибкаТипа",
+                          "Нельзя итерировать по " + coll->typeName());
                 }
-            } catch (BreakSignal&) { }
+            } catch (BreakSignal&) { /* выход */ }
             break;
         }
 
@@ -625,7 +713,7 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
             while (evalExpr(s->cond, child)->truthy()) {
                 try { execStmt(s->loopBody, child); }
                 catch (BreakSignal&)    { break; }
-                catch (ContinueSignal&) { }
+                catch (ContinueSignal&) { /* идём к шагу */ }
                 if (s->forStep) execStmt(s->forStep, child);
             }
             break;
@@ -660,7 +748,8 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
             if (!s->baseName.empty()) {
                 auto it = classes_.find(s->baseName);
                 if (it == classes_.end())
-                    raise("ОшибкаИмени", "Базовый класс '" + s->baseName + "' не найден");
+                    raise("ОшибкаИмени",
+                          "Базовый класс '" + s->baseName + "' не найден");
                 ci->base = it->second;
             }
             ci->members = s->classMembers;
@@ -718,12 +807,17 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
     }
 }
 
-void Interpreter::run(const std::vector<StmtPtr>& prog) {
-    auto env = std::make_shared<Scope>();
+void Interpreter::runIn(const std::vector<StmtPtr>& prog, ScopePtr env) {
+    if (!env) env = std::make_shared<Scope>();
     for (auto& s : prog) {
         try { execStmt(s, env); }
         catch (ReturnSignal&) { break; }
     }
+}
+
+void Interpreter::run(const std::vector<StmtPtr>& prog) {
+    auto env = std::make_shared<Scope>();
+    runIn(prog, env);
 }
 
 } // namespace veche
