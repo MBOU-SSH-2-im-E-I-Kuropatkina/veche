@@ -8,11 +8,21 @@ namespace veche {
 enum class TokKind {
     End, Newline, Indent, Dedent,
     Ident, Int, Double, String,
-    LParen, RParen, LBracket, RBracket,
+
+    // скобки и разделители
+    LParen, RParen, LBrace, RBrace, LBracket, RBracket,
     Comma, Dot, Colon, Semicolon, Arrow,
+
+    // арифметика
     Plus, Minus, Star, Slash, Percent,
+
+    // присваивание и сравнения
     Assign, Eq, Ne, Lt, Gt, Le, Ge,
+
+    // логика
     And, Or, Not,
+
+    // литералы
     True, False,
 
     // типы
@@ -20,12 +30,14 @@ enum class TokKind {
     KwTypeBool, KwTypeList, KwTypeDict, KwTypeTuple, KwTypeNull,
 
     // управление
-    KwIf, KwElse, KwWhile, KwFor, KwIn, KwBreak, KwContinue,
-    KwDo, KwThen,
+    KwIf, KwElse, KwThen,
+    KwWhile, KwFor, KwIn, KwDo,
+    KwBreak, KwContinue,
 
-    // функции/классы
+    // функции и классы
     KwFunction, KwClass, KwExtends, KwOverride,
-    KwImmutable, KwMutable, KwReturn, KwNew, KwSelf, KwBase,
+    KwImmutable, KwMutable,
+    KwReturn, KwNew, KwSelf, KwBase,
     KwCreate, KwEmpty,
 
     // переменные
@@ -64,6 +76,7 @@ private:
     int line_ = 1, col_ = 1;
     std::vector<std::string> lines_;
 
+    // отступы
     std::vector<int> indentStack_;
     bool lineStart_ = true;
     bool inBlockComment_ = false;
