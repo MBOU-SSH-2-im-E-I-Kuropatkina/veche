@@ -337,7 +337,6 @@ StmtPtr Parser::parseFunction() {
 
     expect(TokKind::KwFunction, "'функция'");
 
-    // Имя — Ident или KwCreate ("создать" не в keywords, придёт Ident)
     if (check(TokKind::Ident)) {
         s->funcName = cur().text; ++pos_;
     } else {
@@ -740,12 +739,27 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
+        // ---- Скобки: либо выражение, либо кортеж (если внутри ';') ----
         case TokKind::LParen: {
             ++pos_;
-            auto e = parseExpr();
+            auto first = parseExpr();
+            if (check(TokKind::Semicolon)) {
+                // кортеж
+                auto e = std::make_shared<Expr>();
+                e->kind = ExprKind::TupleLit;
+                e->line = t.line; e->col = t.col;
+                e->elements.push_back(first);
+                while (match(TokKind::Semicolon)) {
+                    if (check(TokKind::RParen)) break;   // висящая ;
+                    e->elements.push_back(parseExpr());
+                }
+                expect(TokKind::RParen, "')'");
+                return e;
+            }
             expect(TokKind::RParen, "')'");
-            return e;
+            return first;
         }
+
         case TokKind::LBracket: {
             ++pos_;
             auto e = std::make_shared<Expr>();
@@ -756,6 +770,7 @@ ExprPtr Parser::parsePrimary() {
             expect(TokKind::RBracket, "']'");
             return e;
         }
+
         case TokKind::LBrace: {
             // словарь {"ключ": значение; ...}
             ++pos_;
@@ -772,11 +787,13 @@ ExprPtr Parser::parsePrimary() {
             expect(TokKind::RBrace, "'}'");
             return e;
         }
+
         case TokKind::Ident: {
             auto e = std::make_shared<Expr>();
             e->kind = ExprKind::Variable; e->name = t.text;
             e->line = t.line; e->col = t.col; ++pos_; return e;
         }
+
         default:
             error("ОшибкаСинтаксиса", "Неожиданный токен");
     }
