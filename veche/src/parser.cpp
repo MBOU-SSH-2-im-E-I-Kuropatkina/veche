@@ -199,7 +199,7 @@ StmtPtr Parser::parseIf() {
             skipSeparators();
             if (match(TokKind::KwElse)) {
                 if (check(TokKind::KwIf)) {
-                    --pos_;   // откатываем KwIf, чтобы parseIf обработал
+                    --pos_;
                     nested->elseBranch = parseIf();
                 } else {
                     skipSeparators();
@@ -704,6 +704,39 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
+        // ---- Приведения: целое(x), дробь(x), строка(x), символ(x) ----
+        // Срабатывают только если сразу после типа идёт '(' —
+        // иначе это объявление переменной вроде 'целое х будет …'.
+        case TokKind::KwTypeInt:
+        case TokKind::KwTypeDouble:
+        case TokKind::KwTypeString:
+        case TokKind::KwTypeChar: {
+            if (peek(1).kind != TokKind::LParen) {
+                error("ОшибкаСинтаксиса",
+                      "Тип нельзя использовать как значение");
+            }
+            std::string fname;
+            switch (t.kind) {
+                case TokKind::KwTypeInt:    fname = "__целое__"; break;
+                case TokKind::KwTypeDouble: fname = "__дробь__"; break;
+                case TokKind::KwTypeString: fname = "__строка__"; break;
+                case TokKind::KwTypeChar:   fname = "__символ__"; break;
+                default: break;
+            }
+            ++pos_;   // съесть сам токен типа
+            auto e = std::make_shared<Expr>();
+            e->kind = ExprKind::Call; e->line = t.line; e->col = t.col;
+            auto f = std::make_shared<Expr>();
+            f->kind = ExprKind::Variable; f->name = fname;
+            e->callee = f;
+            expect(TokKind::LParen, "'('");
+            if (!check(TokKind::RParen)) {
+                do { e->args.push_back(parseExpr()); } while (match(TokKind::Semicolon));
+            }
+            expect(TokKind::RParen, "')'");
+            return e;
+        }
+
         // ---- Графика ----
         case TokKind::KwWindow:
         case TokKind::KwDrawPoint:
@@ -744,13 +777,12 @@ ExprPtr Parser::parsePrimary() {
             ++pos_;
             auto first = parseExpr();
             if (check(TokKind::Semicolon)) {
-                // кортеж
                 auto e = std::make_shared<Expr>();
                 e->kind = ExprKind::TupleLit;
                 e->line = t.line; e->col = t.col;
                 e->elements.push_back(first);
                 while (match(TokKind::Semicolon)) {
-                    if (check(TokKind::RParen)) break;   // висящая ;
+                    if (check(TokKind::RParen)) break;
                     e->elements.push_back(parseExpr());
                 }
                 expect(TokKind::RParen, "')'");
@@ -772,7 +804,6 @@ ExprPtr Parser::parsePrimary() {
         }
 
         case TokKind::LBrace: {
-            // словарь {"ключ": значение; ...}
             ++pos_;
             auto e = std::make_shared<Expr>();
             e->kind = ExprKind::DictLit; e->line = t.line; e->col = t.col;

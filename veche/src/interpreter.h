@@ -11,6 +11,8 @@ namespace veche {
 struct Scope {
     std::unordered_map<std::string, ValuePtr> vars;
     std::unordered_map<std::string, bool> consts;
+    std::unordered_map<std::string, bool> stricts;
+    std::unordered_map<std::string, std::string> types; // объявленный тип
     std::shared_ptr<Scope> parent;
     ValuePtr self;
     std::shared_ptr<ClassInfo> klass;
@@ -28,6 +30,18 @@ struct Scope {
         if (parent) return parent->isConst(n);
         return false;
     }
+    bool isStrict(const std::string& n) {
+        auto it = stricts.find(n);
+        if (it != stricts.end()) return it->second;
+        if (parent) return parent->isStrict(n);
+        return false;
+    }
+    std::string declaredType(const std::string& n) {
+        auto it = types.find(n);
+        if (it != types.end()) return it->second;
+        if (parent) return parent->declaredType(n);
+        return "";
+    }
 };
 
 using ScopePtr = std::shared_ptr<Scope>;
@@ -36,8 +50,6 @@ class Interpreter {
 public:
     Interpreter();
     void run(const std::vector<StmtPtr>& prog);
-    // Выполнить программу в уже существующем окружении.
-    // Используется REPL-ом, чтобы переменные сохранялись между строками.
     void runIn(const std::vector<StmtPtr>& prog, ScopePtr env);
 
     ValuePtr evalExpr(const ExprPtr& e, ScopePtr env);
@@ -49,7 +61,6 @@ public:
     void registerClass(std::shared_ptr<ClassInfo> c) { classes_[c->name] = c; }
     void setGlobals(const std::unordered_map<std::string, ValuePtr>& g) { globals_ = g; }
 
-    // Создать новое пустое окружение (для REPL).
     ScopePtr makeGlobalScope() { return std::make_shared<Scope>(); }
 
 private:

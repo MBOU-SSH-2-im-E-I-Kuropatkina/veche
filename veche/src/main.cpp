@@ -123,7 +123,7 @@ static void printHelp() {
 }
 
 static void printVersion() {
-    std::cout << "Вече 2.1.0 (C++17, TDM-GCC-64, GDI32-графика)\n";
+    std::cout << "Вече 2.1.5 (C++17, TDM-GCC-64, GDI32-графика)\n";
 }
 
 int main(int argc, char** argv) {
