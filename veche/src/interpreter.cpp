@@ -41,7 +41,7 @@ static bool isAssignableStrict(const std::string& typeName, Type vt) {
     if (typeName == "словарь") return vt == Type::Словарь;
     if (typeName == "кортеж")  return vt == Type::Кортеж;
     if (typeName == "ничто")   return vt == Type::Ничто;
-    return true; // для классов не проверяем строго
+    return true;
 }
 
 // ============================================================
@@ -123,7 +123,6 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             auto it = globals_.find(e->name);
             if (it != globals_.end()) return it->second;
 
-            // Встроенные функции
             if (e->name == "__вывод__" || e->name == "__ввод__"
              || e->name == "__окно__" || e->name == "__цвет__"
              || e->name == "__очистить__" || e->name == "__точка__"
@@ -281,7 +280,6 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
         }
 
         case ExprKind::Call: {
-            // ---- Встроенные ----
             if (e->callee->kind == ExprKind::Variable) {
                 const std::string& n = e->callee->name;
 
@@ -302,7 +300,6 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                 if (n == "__пауза__")  return builtinSleep(evalArgs());
                 if (n == "__закрыть_окно__") return builtinCloseWindow(evalArgs());
 
-                // Приведения
                 if (n == "__целое__") {
                     auto args = evalArgs();
                     if (args.empty()) return Value::makeInt(0);
@@ -325,7 +322,6 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                 }
             }
 
-            // ---- Метод ----
             if (e->callee->kind == ExprKind::Member) {
                 auto obj = evalExpr(e->callee->left, env);
                 if (obj->type == Type::Объект) {
@@ -354,7 +350,6 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                 }
             }
 
-            // ---- Обычная функция ----
             auto callee = evalExpr(e->callee, env);
             if (callee->type == Type::Функция && callee->func) {
                 std::vector<ValuePtr> args;
@@ -607,6 +602,19 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
     switch (s->kind) {
 
         case StmtKind::VarDecl: {
+            // ---- ВАРИАНТ A: запрет любого переобъявления ----
+            if (env) {
+                if (env->vars.count(s->varName)) {
+                    raise("ОшибкаИмени",
+                          "Переменная '" + s->varName + "' уже объявлена");
+                }
+            } else {
+                if (globals_.count(s->varName)) {
+                    raise("ОшибкаИмени",
+                          "Переменная '" + s->varName + "' уже объявлена");
+                }
+            }
+
             ValuePtr v = Value::makeNull();
             if (s->init) v = evalExpr(s->init, env);
 
@@ -677,8 +685,9 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
                 }
             }
 
-            if (!env) globals_[s->varName] = v;
-            else {
+            if (!env) {
+                globals_[s->varName] = v;
+            } else {
                 env->vars[s->varName]    = v;
                 env->consts[s->varName]  = s->isConst;
                 env->stricts[s->varName] = s->isStrict;
@@ -690,7 +699,6 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
         case StmtKind::Assign: {
             auto v = evalExpr(s->assignValue, env);
 
-            // Проверка 'строгое' при присваивании
             if (s->assignTarget->kind == ExprKind::Variable && env) {
                 const std::string& name = s->assignTarget->name;
                 if (env->isStrict(name)) {
@@ -765,7 +773,7 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
                     raise("ОшибкаТипа",
                           "Нельзя итерировать по " + coll->typeName());
                 }
-            } catch (BreakSignal&) { /* выход */ }
+            } catch (BreakSignal&) { }
             break;
         }
 
@@ -793,6 +801,14 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
         }
 
         case StmtKind::FunctionDecl: {
+            if (env && env->vars.count(s->funcName)) {
+                raise("ОшибкаИмени",
+                      "Имя '" + s->funcName + "' уже занято");
+            }
+            if (!env && globals_.count(s->funcName)) {
+                raise("ОшибкаИмени",
+                      "Имя '" + s->funcName + "' уже занято");
+            }
             auto fd = std::make_shared<FunctionDecl>();
             fd->name = s->funcName;
             fd->params = s->params;
@@ -805,6 +821,10 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
         }
 
         case StmtKind::ClassDecl: {
+            if (classes_.count(s->className)) {
+                raise("ОшибкаИмени",
+                      "Класс '" + s->className + "' уже объявлен");
+            }
             auto ci = std::make_shared<ClassInfo>();
             ci->name = s->className;
             ci->baseName = s->baseName;
