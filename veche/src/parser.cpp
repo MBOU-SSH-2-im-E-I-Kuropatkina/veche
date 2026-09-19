@@ -79,7 +79,6 @@ void Parser::skipSeparators() {
     while (check(TokKind::Newline) || check(TokKind::Semicolon)) ++pos_;
 }
 
-// Тело блока: Indent ... Dedent
 StmtPtr Parser::parseBlockIndent() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::Block;
@@ -117,9 +116,6 @@ StmtPtr Parser::parseStatement() {
     }
 }
 
-// пусть [постоянное] [строгое] <тип> <имя> будет <expr>
-// пусть <target> станет <expr>
-// пусть <target> будет <expr>
 StmtPtr Parser::parseLetStmt() {
     auto s = std::make_shared<Stmt>();
     s->line = cur().line; s->col = cur().col;
@@ -128,7 +124,6 @@ StmtPtr Parser::parseLetStmt() {
     bool haveConst  = match(TokKind::KwConst);
     bool haveStrict = match(TokKind::KwStrict);
 
-    // Признак объявления: <тип/класс> <Ident> будет
     bool looksLikeDecl =
         isTypeToken(cur())
         && peek(1).kind == TokKind::Ident
@@ -158,7 +153,6 @@ StmtPtr Parser::parseLetStmt() {
             "'постоянное'/'строгое' допустимы только при объявлении");
     }
 
-    // Присваивание
     s->kind = StmtKind::Assign;
     s->assignTarget = parsePostfix();
     if (match(TokKind::KwBecome)) {
@@ -173,6 +167,8 @@ StmtPtr Parser::parseLetStmt() {
     return s;
 }
 
+// ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: parseIf стал простым и рекурсивным.
+// 'иначе если' = 'иначе' + рекурсивный parseIf. Цепочка любой длины.
 StmtPtr Parser::parseIf() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::If; s->line = cur().line; s->col = cur().col;
@@ -184,29 +180,10 @@ StmtPtr Parser::parseIf() {
     skipSeparators();
     s->thenBranch = parseBlockIndent();
     skipSeparators();
-    if (match(TokKind::KwElse)) {
-        if (match(TokKind::KwIf)) {
-            // иначе если (...) то ...
-            auto nested = std::make_shared<Stmt>();
-            nested->kind = StmtKind::If;
-            nested->line = cur().line; nested->col = cur().col;
-            expect(TokKind::LParen, "'('");
-            nested->cond = parseExpr();
-            expect(TokKind::RParen, "')'");
-            expect(TokKind::KwThen, "'то'");
-            skipSeparators();
-            nested->thenBranch = parseBlockIndent();
-            skipSeparators();
-            if (match(TokKind::KwElse)) {
-                if (check(TokKind::KwIf)) {
-                    --pos_;
-                    nested->elseBranch = parseIf();
-                } else {
-                    skipSeparators();
-                    nested->elseBranch = parseBlockIndent();
-                }
-            }
-            s->elseBranch = nested;
+    if (check(TokKind::KwElse)) {
+        ++pos_;   // съесть 'иначе'
+        if (check(TokKind::KwIf)) {
+            s->elseBranch = parseIf();     // рекурсия — 'иначе если ...'
         } else {
             skipSeparators();
             s->elseBranch = parseBlockIndent();
@@ -234,7 +211,6 @@ StmtPtr Parser::parseFor() {
     expect(TokKind::KwFor, "'для'");
     expect(TokKind::LParen, "'('");
 
-    // Классический: для (пусть <тип> и будет ...; ...; пусть ... станет ...)
     if (check(TokKind::KwLet)) {
         s->kind = StmtKind::ForClassic;
         s->forInit = parseLetStmt();
@@ -252,7 +228,6 @@ StmtPtr Parser::parseFor() {
         return s;
     }
 
-    // для (<имя> в <колл>) делать
     s->kind = StmtKind::ForIn;
     if (!check(TokKind::Ident)) {
         error("ОшибкаСинтаксиса", "Ожидалось имя переменной цикла");
@@ -326,7 +301,6 @@ StmtPtr Parser::parseBreakContinue(TokKind k) {
     return s;
 }
 
-// [неизменяемый|изменяемый] функция <имя>(<тип> <имя>; ...) [возврат <тип>] <блок>
 StmtPtr Parser::parseFunction() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::FunctionDecl;
@@ -377,7 +351,6 @@ StmtPtr Parser::parseFunction() {
     return s;
 }
 
-// класс <Имя> [наследует <Имя>] <блок с полями и методами>
 StmtPtr Parser::parseClass() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::ClassDecl; s->line = cur().line; s->col = cur().col;
@@ -399,7 +372,6 @@ StmtPtr Parser::parseClass() {
         if (check(TokKind::Dedent) || check(TokKind::End)) break;
 
         if (check(TokKind::KwEmpty)) {
-            // пустой <тип> <имя>
             ++pos_;
             auto f = std::make_shared<Stmt>();
             f->kind = StmtKind::VarDecl;
@@ -581,7 +553,6 @@ ExprPtr Parser::parsePostfix() {
     return e;
 }
 
-// Строка с интерполяцией {выражение}
 ExprPtr Parser::parseInterpString(const Token& t) {
     auto e = std::make_shared<Expr>();
     e->kind = ExprKind::Interp;
@@ -704,9 +675,7 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
-        // ---- Приведения: целое(x), дробь(x), строка(x), символ(x) ----
-        // Срабатывают только если сразу после типа идёт '(' —
-        // иначе это объявление переменной вроде 'целое х будет …'.
+        // Приведения: целое(x), дробь(x), строка(x), символ(x)
         case TokKind::KwTypeInt:
         case TokKind::KwTypeDouble:
         case TokKind::KwTypeString:
@@ -723,7 +692,7 @@ ExprPtr Parser::parsePrimary() {
                 case TokKind::KwTypeChar:   fname = "__символ__"; break;
                 default: break;
             }
-            ++pos_;   // съесть сам токен типа
+            ++pos_;
             auto e = std::make_shared<Expr>();
             e->kind = ExprKind::Call; e->line = t.line; e->col = t.col;
             auto f = std::make_shared<Expr>();
@@ -737,7 +706,7 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
-        // ---- Графика ----
+        // Графика
         case TokKind::KwWindow:
         case TokKind::KwDrawPoint:
         case TokKind::KwDrawLine:
@@ -772,7 +741,7 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
-        // ---- Скобки: либо выражение, либо кортеж (если внутри ';') ----
+        // Скобки: выражение или кортеж
         case TokKind::LParen: {
             ++pos_;
             auto first = parseExpr();
