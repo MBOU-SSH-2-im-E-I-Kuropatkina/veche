@@ -1,16 +1,39 @@
 #!/usr/bin/env bash
-# uninstall.sh — удаление «Вече» из ~/.local
+# install.sh — установка «Вече» на Linux
+# Копирует veche в ~/.local/bin.
 set -e
 
-rm -f "$HOME/.local/bin/veche"
+SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
+BIN_SRC="$SRC_DIR/veche"
 
-# Чистим возможные остатки от старых установок
-rm -f "$HOME/.local/share/icons/hicolor/256x256/apps/veche.png"
-rm -f "$HOME/.local/share/applications/veche.desktop"
-rm -f "$HOME/.local/share/mime/packages/veche.xml"
+if [ ! -f "$BIN_SRC" ]; then
+    echo "[ОШИБКА] Не найден $BIN_SRC"
+    echo "Сначала соберите: ./compile.sh"
+    exit 1
+fi
 
-update-mime-database "$HOME/.local/share/mime" 2>/dev/null || true
-update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+BIN_DIR="$HOME/.local/bin"
+mkdir -p "$BIN_DIR"
 
-echo "Удалено."
+cp "$BIN_SRC" "$BIN_DIR/veche"
+chmod +x "$BIN_DIR/veche"
+echo "[OK] Установлен $BIN_DIR/veche"
+
+case ":$PATH:" in
+    *":$BIN_DIR:"*) ;;
+    *)
+        echo ""
+        echo "ВНИМАНИЕ: $BIN_DIR не в PATH."
+        echo "Добавьте в ~/.bashrc:"
+        echo ""
+        echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+        echo ""
+        echo "Затем: source ~/.bashrc"
+        ;;
+esac
+
+echo ""
+echo "Готово. Проверьте:"
+echo "    veche -v"
+echo "    veche examples/hello.veche"
+echo "    veche -r"
