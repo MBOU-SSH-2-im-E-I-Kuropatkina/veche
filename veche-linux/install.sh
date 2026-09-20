@@ -41,7 +41,8 @@ update-mime-database "$HOME/.local/share/mime" 2>/dev/null || true
 echo "[3/4] MIME-тип зарегистрирован"
 
 # --- 4. .desktop ---
-cp "$SRC_DIR/veche.desktop" "$APP_DIR/veche.desktop"
+sed "s|^Exec=.*|Exec=$BIN_DIR/veche %f|" \
+    "$SRC_DIR/veche.desktop" > "$APP_DIR/veche.desktop"
 update-desktop-database "$APP_DIR" 2>/dev/null || true
 echo "[4/4] .desktop-файл установлен"
 
