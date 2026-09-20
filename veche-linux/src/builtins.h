@@ -18,4 +18,11 @@ ValuePtr builtinDrawRect(const std::vector<ValuePtr>& args);
 ValuePtr builtinSleep(const std::vector<ValuePtr>& args);
 ValuePtr builtinCloseWindow(const std::vector<ValuePtr>& args);
 
+// Встроенные функции списка
+ValuePtr builtinLen(const std::vector<ValuePtr>& args);
+ValuePtr builtinAdd(const std::vector<ValuePtr>& args);
+ValuePtr builtinRemove(const std::vector<ValuePtr>& args);
+ValuePtr builtinSwap(const std::vector<ValuePtr>& args);
+ValuePtr builtinIndex(const std::vector<ValuePtr>& args);
+
 } // namespace veche

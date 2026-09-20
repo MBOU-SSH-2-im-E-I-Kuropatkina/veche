@@ -1,7 +1,9 @@
 #include "builtins.h"
 #include "graphics.h"
+#include "errors.h"
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 namespace veche {
 
@@ -88,6 +90,101 @@ ValuePtr builtinSleep(const std::vector<ValuePtr>& args) {
 ValuePtr builtinCloseWindow(const std::vector<ValuePtr>&) {
     graphics::closeWindow();
     return Value::makeNull();
+}
+
+// ============================================================
+//                  ВСТРОЕННЫЕ ФУНКЦИИ СПИСКА
+// ============================================================
+
+ValuePtr builtinLen(const std::vector<ValuePtr>& args) {
+    if (args.empty() || !args[0]) return Value::makeInt(0);
+    auto v = args[0];
+    switch (v->type) {
+        case Type::Строка:
+        case Type::Слово:
+            return Value::makeInt((int64_t)v->s.size());
+        case Type::Список:
+            return Value::makeInt((int64_t)v->list->size());
+        case Type::Кортеж:
+            return Value::makeInt((int64_t)v->tuple->size());
+        case Type::Словарь:
+            return Value::makeInt((int64_t)v->dict->size());
+        default:
+            return Value::makeInt(0);
+    }
+}
+
+ValuePtr builtinAdd(const std::vector<ValuePtr>& args) {
+    if (args.size() < 2) return Value::makeNull();
+    auto lst = args[0];
+    auto el  = args[1];
+    if (!lst || lst->type != Type::Список) {
+        throw VecheError("ОшибкаТипа",
+            "добавить: первый аргумент должен быть 'список'");
+    }
+    lst->list->push_back(el);
+    return Value::makeNull();
+}
+
+ValuePtr builtinRemove(const std::vector<ValuePtr>& args) {
+    if (args.size() < 2) return Value::makeNull();
+    auto lst = args[0];
+    auto idx = args[1];
+    if (!lst || lst->type != Type::Список) {
+        throw VecheError("ОшибкаТипа",
+            "удалить: первый аргумент должен быть 'список'");
+    }
+    if (!idx || idx->type != Type::Целое) {
+        throw VecheError("ОшибкаТипа",
+            "удалить: второй аргумент должен быть 'целое'");
+    }
+    int64_t i = idx->i;
+    if (i < 0 || (size_t)i >= lst->list->size()) {
+        throw VecheError("ОшибкаИндекса",
+            "удалить: индекс " + std::to_string(i) + " вне диапазона");
+    }
+    lst->list->erase(lst->list->begin() + i);
+    return Value::makeNull();
+}
+
+ValuePtr builtinSwap(const std::vector<ValuePtr>& args) {
+    if (args.size() < 3) return Value::makeNull();
+    auto lst = args[0];
+    auto a   = args[1];
+    auto b   = args[2];
+    if (!lst || lst->type != Type::Список) {
+        throw VecheError("ОшибкаТипа",
+            "обмен: первый аргумент должен быть 'список'");
+    }
+    if (!a || a->type != Type::Целое || !b || b->type != Type::Целое) {
+        throw VecheError("ОшибкаТипа",
+            "обмен: индексы должны быть 'целое'");
+    }
+    int64_t i = a->i, j = b->i;
+    size_t sz = lst->list->size();
+    if (i < 0 || (size_t)i >= sz || j < 0 || (size_t)j >= sz) {
+        throw VecheError("ОшибкаИндекса",
+            "обмен: индекс вне диапазона");
+    }
+    std::swap((*lst->list)[i], (*lst->list)[j]);
+    return Value::makeNull();
+}
+
+ValuePtr builtinIndex(const std::vector<ValuePtr>& args) {
+    if (args.size() < 2) return Value::makeInt(-1);
+    auto lst = args[0];
+    auto el  = args[1];
+    if (!lst || lst->type != Type::Список) {
+        throw VecheError("ОшибкаТипа",
+            "индекс: первый аргумент должен быть 'список'");
+    }
+    std::string needle = el->toString();
+    for (size_t i = 0; i < lst->list->size(); ++i) {
+        if ((*lst->list)[i]->toString() == needle) {
+            return Value::makeInt((int64_t)i);
+        }
+    }
+    return Value::makeInt(-1);
 }
 
 } // namespace veche

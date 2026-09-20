@@ -129,7 +129,10 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
              || e->name == "__линия__" || e->name == "__прямоугольник__"
              || e->name == "__пауза__" || e->name == "__закрыть_окно__"
              || e->name == "__целое__" || e->name == "__дробь__"
-             || e->name == "__строка__" || e->name == "__символ__") {
+             || e->name == "__строка__" || e->name == "__символ__"
+             || e->name == "__длина__" || e->name == "__добавить__"
+             || e->name == "__удалить__" || e->name == "__обмен__"
+             || e->name == "__индекс__") {
                 return Value::makeFunction(nullptr);
             }
             auto cit = classes_.find(e->name);
@@ -320,6 +323,12 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
                     if (args.empty()) return Value::makeWord("");
                     return builtinToChar(args[0]);
                 }
+
+                if (n == "__длина__")    return builtinLen(evalArgs());
+                if (n == "__добавить__") return builtinAdd(evalArgs());
+                if (n == "__удалить__")  return builtinRemove(evalArgs());
+                if (n == "__обмен__")    return builtinSwap(evalArgs());
+                if (n == "__индекс__")   return builtinIndex(evalArgs());
             }
 
             if (e->callee->kind == ExprKind::Member) {
@@ -602,7 +611,6 @@ void Interpreter::execStmt(const StmtPtr& s, ScopePtr env) {
     switch (s->kind) {
 
         case StmtKind::VarDecl: {
-            // ---- ВАРИАНТ A: запрет любого переобъявления ----
             if (env) {
                 if (env->vars.count(s->varName)) {
                     raise("ОшибкаИмени",

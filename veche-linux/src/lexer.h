@@ -9,49 +9,40 @@ enum class TokKind {
     End, Newline, Indent, Dedent,
     Ident, Int, Double, String,
 
-    // скобки и разделители
     LParen, RParen, LBrace, RBrace, LBracket, RBracket,
     Comma, Dot, Colon, Semicolon, Arrow,
 
-    // арифметика
     Plus, Minus, Star, Slash, Percent,
 
-    // присваивание и сравнения
     Assign, Eq, Ne, Lt, Gt, Le, Ge,
 
-    // логика
     And, Or, Not,
 
-    // литералы
     True, False,
 
-    // типы
     KwTypeInt, KwTypeDouble, KwTypeString, KwTypeChar, KwTypeWord,
     KwTypeBool, KwTypeList, KwTypeDict, KwTypeTuple, KwTypeNull,
 
-    // управление
     KwIf, KwElse, KwThen,
     KwWhile, KwFor, KwIn, KwDo,
     KwBreak, KwContinue,
 
-    // функции и классы
     KwFunction, KwClass, KwExtends, KwOverride,
     KwImmutable, KwMutable,
     KwReturn, KwNew, KwSelf, KwBase,
     KwCreate, KwEmpty,
 
-    // переменные
     KwLet, KwBe, KwBecome, KwConst, KwStrict,
 
-    // ошибки
     KwTry, KwCatch, KwFinally, KwRaise,
 
-    // ввод/вывод
     KwPrint, KwInput,
 
-    // графика
     KwWindow, KwDrawPoint, KwDrawLine, KwDrawRect,
-    KwColor, KwClear, KwSleep, KwClose
+    KwColor, KwClear, KwSleep, KwClose,
+
+    // Встроенные функции
+    KwLen, KwAdd, KwRemove, KwSwap, KwIndex
 };
 
 struct Token {
@@ -76,7 +67,6 @@ private:
     int line_ = 1, col_ = 1;
     std::vector<std::string> lines_;
 
-    // отступы
     std::vector<int> indentStack_;
     bool lineStart_ = true;
     bool inBlockComment_ = false;

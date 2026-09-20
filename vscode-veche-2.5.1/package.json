@@ -2,7 +2,7 @@
   "name": "veche-lang",
   "displayName": "Вече Language",
   "description": "Подсветка, сниппеты и автодополнение для языка «Вече»",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "publisher": "veche",
   "engines": {
     "vscode": "^1.60.0"

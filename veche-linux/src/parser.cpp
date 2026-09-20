@@ -53,7 +53,7 @@ std::string Parser::typeFromToken(const Token& t) {
         case TokKind::KwTypeDict:   return "словарь";
         case TokKind::KwTypeTuple:  return "кортеж";
         case TokKind::KwTypeNull:   return "ничто";
-        case TokKind::Ident:        return t.text;   // имя класса — тоже тип
+        case TokKind::Ident:        return t.text;
         default: return "";
     }
 }
@@ -167,8 +167,6 @@ StmtPtr Parser::parseLetStmt() {
     return s;
 }
 
-// ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: parseIf стал простым и рекурсивным.
-// 'иначе если' = 'иначе' + рекурсивный parseIf. Цепочка любой длины.
 StmtPtr Parser::parseIf() {
     auto s = std::make_shared<Stmt>();
     s->kind = StmtKind::If; s->line = cur().line; s->col = cur().col;
@@ -181,9 +179,9 @@ StmtPtr Parser::parseIf() {
     s->thenBranch = parseBlockIndent();
     skipSeparators();
     if (check(TokKind::KwElse)) {
-        ++pos_;   // съесть 'иначе'
+        ++pos_;
         if (check(TokKind::KwIf)) {
-            s->elseBranch = parseIf();     // рекурсия — 'иначе если ...'
+            s->elseBranch = parseIf();
         } else {
             skipSeparators();
             s->elseBranch = parseBlockIndent();
@@ -725,6 +723,35 @@ ExprPtr Parser::parsePrimary() {
                 case TokKind::KwClear:     fname = "__очистить__"; break;
                 case TokKind::KwSleep:     fname = "__пауза__"; break;
                 case TokKind::KwClose:     fname = "__закрыть_окно__"; break;
+                default: break;
+            }
+            ++pos_;
+            auto e = std::make_shared<Expr>();
+            e->kind = ExprKind::Call; e->line = t.line; e->col = t.col;
+            auto f = std::make_shared<Expr>();
+            f->kind = ExprKind::Variable; f->name = fname;
+            e->callee = f;
+            expect(TokKind::LParen, "'('");
+            if (!check(TokKind::RParen)) {
+                do { e->args.push_back(parseExpr()); } while (match(TokKind::Semicolon));
+            }
+            expect(TokKind::RParen, "')'");
+            return e;
+        }
+
+        // Встроенные функции списка
+        case TokKind::KwLen:
+        case TokKind::KwAdd:
+        case TokKind::KwRemove:
+        case TokKind::KwSwap:
+        case TokKind::KwIndex: {
+            std::string fname;
+            switch (t.kind) {
+                case TokKind::KwLen:    fname = "__длина__"; break;
+                case TokKind::KwAdd:    fname = "__добавить__"; break;
+                case TokKind::KwRemove: fname = "__удалить__"; break;
+                case TokKind::KwSwap:   fname = "__обмен__"; break;
+                case TokKind::KwIndex:  fname = "__индекс__"; break;
                 default: break;
             }
             ++pos_;

@@ -71,6 +71,13 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"пауза",                   TokKind::KwSleep},
     {"закрыть_окно",            TokKind::KwClose},
 
+    // встроенные функции
+    {"длина",   TokKind::KwLen},
+    {"добавить",TokKind::KwAdd},
+    {"удалить", TokKind::KwRemove},
+    {"обмен",   TokKind::KwSwap},
+    {"индекс",  TokKind::KwIndex},
+
     // литералы
     {"истина", TokKind::True},
     {"ложь",   TokKind::False},
@@ -79,9 +86,6 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"и",   TokKind::And},
     {"или", TokKind::Or},
     {"не",  TokKind::Not},
-
-    // ВНИМАНИЕ: "создать" НЕ здесь — приходит как Ident,
-    // чтобы можно было назвать функцию создать(...).
 };
 
 Lexer::Lexer(std::string src, std::string file)

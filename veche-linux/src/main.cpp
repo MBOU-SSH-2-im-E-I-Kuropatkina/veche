@@ -109,7 +109,7 @@ static void printHelp() {
 }
 
 static void printVersion() {
-    std::cout << "Вече 2.5.0 (Linux, C++17, SDL2)\n";
+    std::cout << "Вече 2.5.1 (Linux, C++17, SDL2)\n";
 }
 
 int main(int argc, char** argv) {
