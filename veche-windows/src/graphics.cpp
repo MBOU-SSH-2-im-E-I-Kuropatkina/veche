@@ -1,8 +1,6 @@
 #include "graphics.h"
+#include <windows.h>
 #include <iostream>
-
-#ifdef _WIN32
-#  include <windows.h>
 
 namespace veche { namespace graphics {
 
@@ -47,7 +45,6 @@ bool openWindow(int width, int height, const std::string& title) {
         g_classReg = true;
     }
 
-    // UTF-8 заголовок -> UTF-16
     std::wstring wtitle;
     int wlen = MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, nullptr, 0);
     if (wlen > 0) {
@@ -146,24 +143,3 @@ void closeWindow() {
 }
 
 }} // namespace
-
-#else // не-Windows — заглушки
-
-namespace veche { namespace graphics {
-
-bool openWindow(int, int, const std::string&) {
-    std::cerr << "[Вече] Графика доступна только на Windows.\n";
-    return false;
-}
-void setColor(int, int, int) {}
-void clear() {}
-void drawPoint(int, int) {}
-void drawLine(int, int, int, int) {}
-void drawRect(int, int, int, int) {}
-void sleepMs(int ms) { (void)ms; }
-void closeWindow() {}
-void pumpMessages() {}
-
-}} // namespace
-
-#endif

@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <windows.h>
 #include "lexer.h"
 #include "parser.h"
 #include "analyzer.h"
@@ -110,12 +109,11 @@ static void printHelp() {
 }
 
 static void printVersion() {
-    std::cout << "Вече 2.5.0 (Windows, C++17, GDI32)\n";
+    std::cout << "Вече 2.5.0 (Linux, C++17, SDL2)\n";
 }
 
 int main(int argc, char** argv) {
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
+    // На Linux UTF-8 в консоли по умолчанию, setconsolecp не нужен
 
     if (argc < 2) { printHelp(); return 0; }
     std::string a = argv[1];

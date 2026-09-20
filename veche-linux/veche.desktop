@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Вече
+GenericName=Интерпретатор Вече
+Comment=Интерпретируемый язык с кириллическим синтаксисом
+Exec=veche %f
+Icon=veche
+Terminal=true
+Categories=Development;IDE;
+MimeType=text/x-veche;
+StartupNotify=false

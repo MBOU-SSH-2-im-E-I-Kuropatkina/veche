@@ -7,7 +7,7 @@
 Имя исполняемого файла — `veche.exe` (латиницей, как требует консоль).
 Кириллица «Вече» используется в документации и внутри скриптов.
 
-**Текущая версия:** 2.2.0
+**Текущая версия:** 2.5.0
 
 ---
 
@@ -38,18 +38,29 @@
 
 ## Установка
 
-1. Скачайте `veche.zip` со страницы [Releases](../../releases).
-2. Распакуйте в удобное место, например `C:\Veche`.
-3. Запустите пример:
+1. Скачайте исходный код этого репозитория, распакуйте в любую папку, например в C:\Veche (/home/user/veche/)
+2. Запустите сначала compile.ps1 (.sh), затем install.bat (.sh).
+```powershell
+cd C:\Veche\veche_windows
+pswh -File compile.ps1
+.\install.bat
+```
+или 
+```bash
+cd ~/veche/veche_linux
+chmod +x compile.sh install.sh
+./compile.sh
+./install.sh
+```
+3. Перезапустите терминал
+4. Запустите пример:
 
 ```bat
-cd /d C:\Veche
 veche.exe examples\hello.veche
 ```
-
-Чтобы запускать `veche.exe` из любой папки — запустите `install.bat`
-из корня проекта и перезапустите `cmd`.
-
+```bash
+veche examples/hello.veche
+```
 ---
 
 ## Сборка из исходников
