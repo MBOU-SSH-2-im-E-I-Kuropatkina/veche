@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="text/x-veche">
-    <comment>Исходник Вече</comment>
-    <comment xml:lang="en">Veche source</comment>
-    <glob pattern="*.veche"/>
-    <glob pattern="*.vech"/>
-  </mime-type>
-</mime-info>
