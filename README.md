@@ -123,7 +123,7 @@ veche -v
 
 ```
 veche/
-├── src/
+├── veche-windows/src/
 │   ├── main.cpp
 │   ├── lexer.cpp        + lexer.h
 │   ├── parser.cpp       + parser.h
@@ -135,16 +135,17 @@ veche/
 │   ├── errors.cpp       + errors.h
 │   ├── graphics.cpp     + graphics.h
 │   └── utf8.cpp         + utf8.h
-├── examples/
+├── veche-windows/examples/
 │   ├── hello.veche
 │   ├── fib.veche
 │   ├── oop.veche
 │   ├── draw.veche
 │   ├── conversions.veche
 │   └── all-syntax.veche
-├── vscode-veche/        расширение VS Code
-├── install.bat
-├── veche.ico
+├── veche-linux/               Структура копируется
+├── vscode-veche-2.5.1/        расширение VS Code
+├── install.bat                в veche-windows
+├── veche.ico                  в veche-windows
 ├── LICENSE
 └── README.md
 ```
