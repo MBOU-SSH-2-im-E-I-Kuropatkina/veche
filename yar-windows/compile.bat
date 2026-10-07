@@ -39,4 +39,29 @@ echo Компиляция проекта...
     %SRC_FILES% ^
     /link ^
     /LIBPATH:"%LLVM_PATH%\lib" ^
-    %LLVM_LIBS%v
+    %LLVM_LIBS% ^
+    gdi32.lib ^
+    /OUT:veche.exe
+
+if %errorlevel% neq 0 (
+    echo.
+    echo Ошибка компиляции!
+    pause
+    exit /b 1
+)
+
+echo.
+echo ========================================
+echo Успешно скомпилировано в veche.exe!
+echo ========================================
+echo.
+echo Использование:
+echo   veche.exe script.veche              - интерпретация
+echo   veche.exe -c script.veche           - компиляция в output.obj
+echo   veche.exe -c script.veche -o out.obj - компиляция с именем файла
+echo   veche.exe -i                        - REPL
+echo   veche.exe -v                        - версия
+echo   veche.exe -h                        - помощь
+echo.
+
+pause
