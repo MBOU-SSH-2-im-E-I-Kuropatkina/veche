@@ -1,2 +1,2 @@
-linux: 2.5.1
-windows: 2.5.1
+linux: 2.6.0-hotfix_1
+windows: 2.6.0-hotfix_1
