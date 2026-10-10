@@ -77,6 +77,7 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"удалить", TokKind::KwRemove},
     {"обмен",   TokKind::KwSwap},
     {"индекс",  TokKind::KwIndex},
+    {"нажата",  TokKind::KwKeyPressed},
 
     // литералы
     {"истина", TokKind::True},
@@ -290,7 +291,7 @@ std::vector<Token> Lexer::tokenize() {
         if (c >= '0' && c <= '9') { out.push_back(lexNumber()); continue; }
         if (c == '"') { out.push_back(lexString()); continue; }
 
-        auto push = [&](TokKind k, const std::string& s = "") {
+        auto push = & {
             Token t; t.kind = k; t.text = s; t.line = ln; t.col = cl;
             out.push_back(t);
         };

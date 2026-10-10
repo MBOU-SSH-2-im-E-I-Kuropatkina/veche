@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <unordered_map>
+#include <windows.h> // <-- ВАЖНО для Windows
 
 namespace veche {
 
@@ -25,6 +27,38 @@ ValuePtr builtinInput(const std::vector<ValuePtr>& args) {
     if (!std::getline(std::cin, line)) return Value::makeNull();
     if (!line.empty() && line.back() == '\r') line.pop_back();
     return Value::makeString(line);
+}
+
+ValuePtr builtinKeyPressed(const std::vector<ValuePtr>& args) {
+    if (args.empty() || !args[0]) return Value::makeBool(false);
+    std::string keyName = args[0]->toString();
+    std::transform(keyName.begin(), keyName.end(), keyName.begin(), ::tolower);
+
+    static const std::unordered_map<std::string, int> winKeyMap = {
+        {"ctrl", VK_CONTROL}, {"lctrl", VK_LCONTROL}, {"rctrl", VK_RCONTROL},
+        {"shift", VK_SHIFT}, {"lshift", VK_LSHIFT}, {"rshift", VK_RSHIFT},
+        {"alt", VK_MENU}, {"lalt", VK_LMENU}, {"ralt", VK_RMENU},
+        {"space", VK_SPACE}, {"enter", VK_RETURN}, {"esc", VK_ESCAPE},
+        {"backspace", VK_BACK}, {"tab", VK_TAB},
+        {"up", VK_UP}, {"down", VK_DOWN}, {"left", VK_LEFT}, {"right", VK_RIGHT},
+        {"f1", VK_F1}, {"f2", VK_F2}, {"f3", VK_F3}, {"f4", VK_F4},
+        {"f5", VK_F5}, {"f6", VK_F6}, {"f7", VK_F7}, {"f8", VK_F8},
+        {"f9", VK_F9}, {"f10", VK_F10}, {"f11", VK_F11}, {"f12", VK_F12}
+    };
+
+    int vk = -1;
+    if (auto it = winKeyMap.find(keyName); it != winKeyMap.end()) {
+        vk = it->second;
+    } else if (keyName.size() == 1) {
+        char c = keyName[0];
+        if (c >= 'a' && c <= 'z') vk = 'A' + (c - 'a');
+        else if (c >= '0' && c <= '9') vk = c;
+    }
+
+    if (vk == -1) return Value::makeBool(false);
+    
+    // Проверяем старший бит (0x8000), чтобы узнать, нажата ли клавиша прямо сейчас
+    return Value::makeBool(GetAsyncKeyState(vk) & 0x8000);
 }
 
 static int toInt(ValuePtr v, int def = 0) {

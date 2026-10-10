@@ -7,6 +7,7 @@ namespace veche {
 
 ValuePtr builtinPrint(const std::vector<ValuePtr>& args);
 ValuePtr builtinInput(const std::vector<ValuePtr>& args);
+ValuePtr builtinKeyPressed(const std::vector<ValuePtr>& args);
 
 // Графика
 ValuePtr builtinWindow(const std::vector<ValuePtr>& args);

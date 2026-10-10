@@ -768,6 +768,22 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
 
+        case TokKind::KwKeyPressed: {
+            std::string fname = "__нажата__";
+            ++pos_;
+            auto e = std::make_shared<Expr>();
+            e->kind = ExprKind::Call; e->line = t.line; e->col = t.col;
+            auto f = std::make_shared<Expr>();
+            f->kind = ExprKind::Variable; f->name = fname;
+            e->callee = f;
+            expect(TokKind::LParen, "'('");
+            if (!check(TokKind::RParen)) {
+                do { e->args.push_back(parseExpr()); } while (match(TokKind::Semicolon));
+            }
+            expect(TokKind::RParen, "')'");
+            return e;
+        }
+
         // Скобки: выражение или кортеж
         case TokKind::LParen: {
             ++pos_;

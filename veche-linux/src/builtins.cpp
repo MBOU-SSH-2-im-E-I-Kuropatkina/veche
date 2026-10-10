@@ -4,6 +4,17 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <unordered_map>
+
+#if defined(__has_include)
+#  if __has_include(<SDL2/SDL.h>)
+#    define VECHE_HAS_SDL2 1
+#  endif
+#endif
+
+#ifdef VECHE_HAS_SDL2
+#include <SDL2/SDL.h>
+#endif
 
 namespace veche {
 
@@ -25,6 +36,60 @@ ValuePtr builtinInput(const std::vector<ValuePtr>& args) {
     if (!std::getline(std::cin, line)) return Value::makeNull();
     if (!line.empty() && line.back() == '\r') line.pop_back();
     return Value::makeString(line);
+}
+
+ValuePtr builtinKeyPressed(const std::vector<ValuePtr>& args) {
+    if (args.empty() || !args[0]) return Value::makeBool(false);
+    std::string keyName = args[0]->toString();
+    std::transform(keyName.begin(), keyName.end(), keyName.begin(), ::tolower);
+
+#ifdef VECHE_HAS_SDL2
+    // Инициализируем SDL, если он еще не инициализирован графикой
+    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
+        SDL_Init(SDL_INIT_VIDEO);
+    }
+
+    static const std::unordered_map<std::string, SDL_Scancode> sdlKeyMap = {
+        {"ctrl", SDL_SCANCODE_LCTRL}, {"lctrl", SDL_SCANCODE_LCTRL}, {"rctrl", SDL_SCANCODE_RCTRL},
+        {"shift", SDL_SCANCODE_LSHIFT}, {"lshift", SDL_SCANCODE_LSHIFT}, {"rshift", SDL_SCANCODE_RSHIFT},
+        {"alt", SDL_SCANCODE_LALT}, {"lalt", SDL_SCANCODE_LALT}, {"ralt", SDL_SCANCODE_RALT},
+        {"space", SDL_SCANCODE_SPACE}, {"enter", SDL_SCANCODE_RETURN}, {"esc", SDL_SCANCODE_ESCAPE},
+        {"backspace", SDL_SCANCODE_BACKSPACE}, {"tab", SDL_SCANCODE_TAB},
+        {"up", SDL_SCANCODE_UP}, {"down", SDL_SCANCODE_DOWN}, {"left", SDL_SCANCODE_LEFT}, {"right", SDL_SCANCODE_RIGHT},
+        {"f1", SDL_SCANCODE_F1}, {"f2", SDL_SCANCODE_F2}, {"f3", SDL_SCANCODE_F3}, {"f4", SDL_SCANCODE_F4},
+        {"f5", SDL_SCANCODE_F5}, {"f6", SDL_SCANCODE_F6}, {"f7", SDL_SCANCODE_F7}, {"f8", SDL_SCANCODE_F8},
+        {"f9", SDL_SCANCODE_F9}, {"f10", SDL_SCANCODE_F10}, {"f11", SDL_SCANCODE_F11}, {"f12", SDL_SCANCODE_F12}
+    };
+
+    SDL_Scancode sc = SDL_SCANCODE_UNKNOWN;
+    if (auto it = sdlKeyMap.find(keyName); it != sdlKeyMap.end()) {
+        sc = it->second;
+    } else if (keyName.size() == 1) {
+        char c = keyName[0];
+        if (c >= 'a' && c <= 'z') sc = (SDL_Scancode)(SDL_SCANCODE_A + (c - 'a'));
+        else if (c >= '0' && c <= '9') sc = (SDL_Scancode)(SDL_SCANCODE_0 + (c - '0'));
+    }
+
+    if (sc == SDL_SCANCODE_UNKNOWN) return Value::makeBool(false);
+
+    SDL_PumpEvents(); // Обновляем состояние клавиатуры
+    const Uint8* state = SDL_GetKeyboardState(NULL);
+    
+    // Для модификаторов проверяем обе стороны (левую и правую)
+    if (keyName == "ctrl") {
+        return Value::makeBool(state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL]);
+    }
+    if (keyName == "shift") {
+        return Value::makeBool(state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]);
+    }
+    if (keyName == "alt") {
+        return Value::makeBool(state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT]);
+    }
+    
+    return Value::makeBool(state[sc] != 0);
+#else
+    return Value::makeBool(false);
+#endif
 }
 
 static int toInt(ValuePtr v, int def = 0) {

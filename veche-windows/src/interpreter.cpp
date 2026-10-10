@@ -132,7 +132,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
              || e->name == "__строка__" || e->name == "__символ__"
              || e->name == "__длина__" || e->name == "__добавить__"
              || e->name == "__удалить__" || e->name == "__обмен__"
-             || e->name == "__индекс__") {
+             || e->name == "__индекс__" || e->name == "__нажата__") { // <-- ДОБАВЛЕНО
                 return Value::makeFunction(nullptr);
             }
             auto cit = classes_.find(e->name);
@@ -286,7 +286,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
             if (e->callee->kind == ExprKind::Variable) {
                 const std::string& n = e->callee->name;
 
-                auto evalArgs = [&]() {
+                auto evalArgs = [&] {
                     std::vector<ValuePtr> args;
                     for (auto& a : e->args) args.push_back(evalExpr(a, env));
                     return args;
@@ -294,6 +294,7 @@ ValuePtr Interpreter::evalExpr(const ExprPtr& e, ScopePtr env) {
 
                 if (n == "__вывод__")  return builtinPrint(evalArgs());
                 if (n == "__ввод__")   return builtinInput(evalArgs());
+                if (n == "__нажата__") return builtinKeyPressed(evalArgs());
                 if (n == "__окно__")   return builtinWindow(evalArgs());
                 if (n == "__цвет__")   return builtinColor(evalArgs());
                 if (n == "__очистить__")return builtinClear(evalArgs());

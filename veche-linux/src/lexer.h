@@ -41,16 +41,17 @@ enum class TokKind {
     KwWindow, KwDrawPoint, KwDrawLine, KwDrawRect,
     KwColor, KwClear, KwSleep, KwClose,
 
-    // Встроенные функции
-    KwLen, KwAdd, KwRemove, KwSwap, KwIndex
+    KwLen, KwAdd, KwRemove, KwSwap, KwIndex,
+    KwKeyPressed
 };
 
 struct Token {
-    TokKind kind;
+    TokKind kind = TokKind::End;
     std::string text;
     int64_t i = 0;
-    double  d = 0.0;
-    int line = 1, col = 1;
+    double d = 0.0;
+    int line = 0;
+    int col = 0;
 };
 
 class Lexer {
