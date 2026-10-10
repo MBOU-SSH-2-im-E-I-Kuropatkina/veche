@@ -110,7 +110,7 @@ static void printHelp() {
 }
 
 static void printVersion() {
-    std::cout << "Вече 2.5.1 (Windows, C++17, GDI32)\n";
+    std::cout << "Вече 2.6.0-hotfix_1 (Windows, C++17, GDI32)\n";
 }
 
 int main(int argc, char** argv) {
