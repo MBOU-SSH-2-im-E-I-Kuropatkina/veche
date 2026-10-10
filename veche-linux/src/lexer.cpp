@@ -77,7 +77,7 @@ static const std::unordered_map<std::string, TokKind> kKeywords = {
     {"удалить", TokKind::KwRemove},
     {"обмен",   TokKind::KwSwap},
     {"индекс",  TokKind::KwIndex},
-    {"нажата",  TokKind::KwKeyPressed},
+    {"нажата",  TokKind::KwKeyPressed}, // <-- ДОБАВЛЕНО
 
     // литералы
     {"истина", TokKind::True},
@@ -291,47 +291,47 @@ std::vector<Token> Lexer::tokenize() {
         if (c >= '0' && c <= '9') { out.push_back(lexNumber()); continue; }
         if (c == '"') { out.push_back(lexString()); continue; }
 
-        auto push = & {
+        auto push = [&](TokKind k, const std::string& s) {
             Token t; t.kind = k; t.text = s; t.line = ln; t.col = cl;
             out.push_back(t);
         };
 
         advance();
         switch (c) {
-            case '(': push(TokKind::LParen); break;
-            case ')': push(TokKind::RParen); break;
-            case '{': push(TokKind::LBrace); break;
-            case '}': push(TokKind::RBrace); break;
-            case '[': push(TokKind::LBracket); break;
-            case ']': push(TokKind::RBracket); break;
-            case ',': push(TokKind::Comma); break;
-            case '.': push(TokKind::Dot); break;
-            case ':': push(TokKind::Colon); break;
-            case ';': push(TokKind::Semicolon); break;
-            case '+': push(TokKind::Plus); break;
-            case '*': push(TokKind::Star); break;
-            case '%': push(TokKind::Percent); break;
-            case '/': push(TokKind::Slash); break;
+            case '(': push(TokKind::LParen, "("); break;
+            case ')': push(TokKind::RParen, ")"); break;
+            case '{': push(TokKind::LBrace, "{"); break;
+            case '}': push(TokKind::RBrace, "}"); break;
+            case '[': push(TokKind::LBracket, "["); break;
+            case ']': push(TokKind::RBracket, "]"); break;
+            case ',': push(TokKind::Comma, ","); break;
+            case '.': push(TokKind::Dot, "."); break;
+            case ':': push(TokKind::Colon, ":"); break;
+            case ';': push(TokKind::Semicolon, ";"); break;
+            case '+': push(TokKind::Plus, "+"); break;
+            case '*': push(TokKind::Star, "*"); break;
+            case '%': push(TokKind::Percent, "%"); break;
+            case '/': push(TokKind::Slash, "/"); break;
             case '-':
-                if (match('>')) push(TokKind::Arrow);
-                else push(TokKind::Minus);
+                if (match('>')) push(TokKind::Arrow, "->");
+                else push(TokKind::Minus, "-");
                 break;
             case '=':
-                if (match('=')) push(TokKind::Eq);
-                else push(TokKind::Assign);
+                if (match('=')) push(TokKind::Eq, "==");
+                else push(TokKind::Assign, "=");
                 break;
             case '!':
-                if (match('=')) push(TokKind::Ne);
+                if (match('=')) push(TokKind::Ne, "!=");
                 else throw VecheError("ОшибкаСинтаксиса",
                     "Неожиданный символ '!'", file_, ln, cl);
                 break;
             case '<':
-                if (match('=')) push(TokKind::Le);
-                else push(TokKind::Lt);
+                if (match('=')) push(TokKind::Le, "<=");
+                else push(TokKind::Lt, "<");
                 break;
             case '>':
-                if (match('=')) push(TokKind::Ge);
-                else push(TokKind::Gt);
+                if (match('=')) push(TokKind::Ge, ">=");
+                else push(TokKind::Gt, ">");
                 break;
             default:
                 throw VecheError("ОшибкаСинтаксиса",
