@@ -40,10 +40,9 @@
 
 1. Скачайте исходный код этого репозитория, распакуйте в любую папку, например в C:\Veche (/home/user/veche/)
 2. Запустите сначала compile.bat (.sh), затем install.bat (.sh).
-```powershell
-cd C:\Veche\veche_windows
-pswh -File compile.ps1
-.\install.bat
+```batch
+compile.bat
+install.bat
 ```
 или 
 ```bash
